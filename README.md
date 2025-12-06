@@ -1,3 +1,7 @@
+# Resonetic-Core
+
+**The physics of emotion, logic, and truth – in less than 500 lines.**
+
 🧠 Resonance-based Hallucination Detector
 
 Project Resonetics
