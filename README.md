@@ -1,18 +1,16 @@
 ## License
 
-**Open Source**: AGPL-3.0 License  
-→ You can use, modify, and distribute this code for free,  
-   but **any derivative work or software that uses Resonetic-Core must also be open-sourced under AGPL-3.0**.
+**Open Source**: AGPL-3.0 (Free forever for open-source & non-commercial use)  
+→ You can use, modify, and distribute freely, but derivative works must remain open-source.
 
-**Commercial / Closed-Source Use**  
-→ Want to use Resonetic-Core in a proprietary product, service, or internal tool without disclosing your source code?  
-   You need a **Commercial License**.
+**Commercial / Enterprise License**  
+→ Want to use Resonetic-Core in a closed-source product, internal tool, or commercial service?  
+Contact me for a simple commercial license.
 
-   Contact: red1239109@gmail.com  
-   Price: negotiable (starting from $10,000 USD per year)
+Email: red1239109@gmail.com  
+Price: Flexible (free for startups <10 employees, $500–5,000/year for companies)
 
-> “Free as in freedom for the community.  
->  Paid as in beer for companies.”
+> “Free for the curious.  
+> Fair price for those who ship.”
 
-Dual-license model (AGPL-3.0 + Commercial)  
-© 2025 red1239109-cmd – All rights reserved for commercial use.
+© 2025 red1239109-cmd
