@@ -24,23 +24,13 @@ No copyleft obligations.
 
 🏷️ Pricing Tiers
 
-Tier
+Indie / Startup (< 10 Employees)
 
-Team Size
+Price: Free (Registration required*)
 
-Price
+Growth / Corp (10+ Employees)
 
-Indie / Startup
-
-< 10 Employees
-
-Free (Registration required*)
-
-Growth / Corp
-
-10+ Employees
-
-$500 ~ $5,000 / year (Based on scale)
+Price: $500 ~ $5,000 / year (Based on scale)
 
 "Free for the curious. Fair price for those who ship."
 
