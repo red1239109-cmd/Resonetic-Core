@@ -2,6 +2,23 @@
 
 **The physics of emotion, logic, and truth – in less than 500 lines.**
 
+pip install torch numpy matplotlib
+
+# 1. "Why does love hurt?" – 5-color philosophical answer
+python 07_prism_mirror.py
+
+# 2. No-training clock that prints only 3, 6, 9
+python 03_sinclocks.py
+
+# 3. Watch the moment emotion turns into permanent trauma
+python 02_burgers_shock.py
+
+# 4. Give only a velocity field → find vortex center instantly
+python 01_resonant_fluid.py
+
+# 5. Keep creativity, auto-filter only lies
+python adaptive_filter.py
+
 🧠 Resonance-based Hallucination Detector
 
 Project Resonetics
