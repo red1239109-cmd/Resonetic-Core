@@ -1,24 +1,20 @@
-🧠 Resonance-based Hallucination Detector
-
-Project Resonetics
-
-This project analyzes the output probability scores (logprobs) of Large Language Models (LLMs) to detect periods of low confidence, which often correlate with factual inaccuracies or "hallucination." We treat the LLM's certainty as a time-series signal, applying an adaptive filter to detect anomalies (lies).
-
-🛠 Installation
-
-Clone the repository:
-
-git clone [Your Repository URL]
+R-Hybrid-Truth: A novel AI truth detection engine using a dual-framework system. It combines Riemann Phase Vortex Analysis (structural consistency) with Adaptive Anomaly Detection (time-series instability) to critically verify text integrity.
 
 
-Install dependencies:
+🚀 How to Contribute
 
-pip install -r requirements.txt
+We follow the standard GitHub workflow for all code contributions:
 
+Fork the repository to your own GitHub account.
 
-Run the detector (Requires OpenAI API Key):
+Clone your forked repository to your local machine.
 
-python resonance_detector.py
+Create a new branch for your feature or fix (e.g., git checkout -b fix/bug-name).
 
+Commit your changes using the Conventional Commits format (e.g., fix: Resolve return loop error).
 
-© 2025 red1239109-cmd
+Push the changes to your branch.
+
+Open a Pull Request (PR) against the main branch of Resonetics/TruthDetector.
+
+For legal agreement, please refer to the ⚖️ Legal & License (Important) section above.
