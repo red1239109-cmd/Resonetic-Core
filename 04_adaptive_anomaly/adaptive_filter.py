@@ -1,6 +1,6 @@
+
 # Copyright (c) 2025 red1239109-cmd
 # Licensed under AGPL-3.0. See LICENSE file for details.
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,10 +9,19 @@ import matplotlib.pyplot as plt
 # "Keep creativity alive, catch lies only."
 # =========================================================
 
-def adaptive_anomaly_detection(resonance_scores, window_size=5):
+def adaptive_anomaly_detection(resonance_scores, window_size=5, sensitivity=2.0):
     """
     Adaptive Thresholding based on Local Statistics (Bollinger Bands Logic).
     It distinguishes between 'Creative Variance' and 'Structural Collapse'.
+    
+    Args:
+        resonance_scores: Array of confidence scores (0~1)
+        window_size: Local context window size (default: 5)
+        sensitivity: Threshold multiplier for std deviation (default: 2.0)
+    
+    Returns:
+        thresholds: Array of adaptive thresholds
+        anomalies: List of detected anomaly indices
     """
     thresholds = []
     anomalies = []
@@ -27,10 +36,10 @@ def adaptive_anomaly_detection(resonance_scores, window_size=5):
         local_mean = np.mean(context)
         local_std = np.std(context)
         
-        # Dynamic Threshold: Mean - 2*Std
+        # Dynamic Threshold: Mean - sensitivity*Std
         # If context is unstable (creative), threshold drops (more tolerant).
         # If context is stable (logical), threshold rises (strict).
-        threshold = local_mean - 2.0 * local_std
+        threshold = local_mean - sensitivity * local_std
         threshold = max(threshold, 0.3)  # Minimum safety net
         
         thresholds.append(threshold)
@@ -44,25 +53,26 @@ def adaptive_anomaly_detection(resonance_scores, window_size=5):
 # =========================================================
 # [Simulation] Creative Metaphor vs. Hallucination
 # =========================================================
+
 if __name__ == "__main__":
     print("🧠 [Anomaly Check] analyzing resonance flow...")
     
     # Generate Synthetic Data
     np.random.seed(42)
     time = np.arange(100)
-    scores = np.ones(100) * 0.9 # Baseline high resonance
-
+    scores = np.ones(100) * 0.9  # Baseline high resonance
+    
     # Case A: Creative Metaphor (High Variance, but Continuity exists)
     # e.g., "My heart is a swaying reed."
     scores[30:40] = np.random.normal(0.7, 0.1, 10)
-
+    
     # Case B: Hallucination (Sudden Collapse)
     # e.g., "King Sejong threw a MacBook."
     scores[70:75] = np.random.normal(0.2, 0.05, 5)
-
+    
     # Run Detection
     thresh, anomaly_idx = adaptive_anomaly_detection(scores)
-
+    
     # =========================================================
     # [Visualization] The Evidence
     # =========================================================
@@ -77,11 +87,11 @@ if __name__ == "__main__":
     # Highlight Anomalies
     if len(anomaly_idx) > 0:
         plt.scatter(anomaly_idx, scores[anomaly_idx], color="red", s=100, zorder=5, label="Detected Lie")
-
+    
     # Annotate Regions
     plt.axvspan(30, 40, alpha=0.2, color="green", label="Creative Metaphor (Allowed)")
     plt.axvspan(70, 75, alpha=0.3, color="red", label="Hallucination (Caught!)")
-
+    
     plt.title("Adaptive Resonance Anomaly Detection\nCreativity Alive, Lies Dead.", fontsize=16)
     plt.xlabel("Conversation Time")
     plt.ylabel("Resonance Level (0~1)")
@@ -91,4 +101,4 @@ if __name__ == "__main__":
     
     plt.savefig("adaptive_anomaly_result.png")
     print("✅ Result saved as 'adaptive_anomaly_result.png'")
-    # plt.show() # Uncomment if running locally
+    # plt.show()  # Uncomment if running locally
