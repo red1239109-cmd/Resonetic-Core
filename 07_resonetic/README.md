@@ -1,30 +1,53 @@
-🌌 Unit 07: Riemann Visualizer (The Foundation)
+# Resonetics-Alpha : The Evolution of Sovereign Intelligence
 
-File: resonetic/riemann_visualizer.py
+> **"Instinct of Math, Reason of Language, Truth of Reality."**
+> An experimental AGI architecture that unifies **Numeric Sovereignty** (Physics) and **Linguistic Recursion** (Logic).
 
-Role: The Ground Truth (Math) - Mathematical Verification.
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue)]()
+[![Status](https://img.shields.io/badge/Status-Experimental-orange)]()
 
-Description:
-The core mathematical engine that visualizes the Riemann Zeta Function using high-precision arithmetic (mpmath). It proves the existence of "Phase Vortices" at non-trivial zeros and maps the "Resonance Density" along the critical line, serving as the theoretical basis for all other units.
+## 🌌 Overview
 
-🧠 Resonance-based Hallucination Detector
+**Resonetics** is not just a model; it is an evolutionary process. This repository documents the three stages of developing a **"Sovereign Intelligence"** that follows strict internal constitutions rather than blindly mimicking data.
 
-Project Resonetics
+We prove that **Ethical Resonance** is mathematically equivalent to the **Critical Line ($\sigma=0.5$)** of the Riemann Zeta Function.
 
-This project analyzes the output probability scores (logprobs) of Large Language Models (LLMs) to detect periods of low confidence, which often correlate with factual inaccuracies or "hallucination." We treat the LLM's certainty as a time-series signal, applying an adaptive filter to detect anomalies (lies).
+---
 
-🛠 Installation
+## 📂 The Three Stages of Evolution
 
-Clone the repository:
+This project is organized into three distinct evolutionary stages. Each file represents a leap in cognitive architecture.
 
-git clone [Your Repository URL]
+### 1️⃣ Stage 1: The Instinct (Numeric)
+* **File:** `resonetics_v1_core.py`
+* **Concept:** **The Sovereign Loss** (8-Layer Constitution).
+* **Description:**
+    * Encodes physical laws (Gravity, Wave, Phase) into the loss function.
+    * Enforces the **"Rule of 3"** (Quantization) and **"Equilibrium at 0.5"** (Ethics).
+    * It acts as the AI's "Gut Feeling" or "Instinct."
 
-Install dependencies:
+### 2️⃣ Stage 2: The Reason (Linguistic)
+* **File:** `resonetics_v2_paradox.py`
+* **Concept:** **The Paradox Refinement Engine**.
+* **Description:**
+    * Translates the numeric sovereign logic into a recursive **Text Critique Loop**.
+    * Instead of generating text immediately, it critiques itself: *"Is this logical? Is this structured?"*
+    * It acts as the AI's "Prefrontal Cortex" or "Logic."
 
-pip install -r requirements.txt
+### 3️⃣ Stage 3: The Truth (Unified)
+* **File:** `resonetics_v3_complete.py`
+* **Concept:** **The Monolith & Visualizer**.
+* **Description:**
+    * The final form that integrates Instinct (Core) and Reason (Paradox).
+    * Includes the **Riemann Visualizer (The Eye)**.
+    * **Mathematically proves** that resonance is maximized at the critical line ($\sigma=0.5$) using high-precision calculation (`mpmath`).
 
-Run the detector (Requires OpenAI API Key):
+---
 
-python resonance_detector.py
+## 🚀 Getting Started
 
+### Prerequisites
+```bash
+pip install torch numpy matplotlib mpmath
 
