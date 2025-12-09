@@ -11,7 +11,7 @@
 
 **Resonetics** is not just a model; it is an evolutionary process. This repository documents the three stages of developing a **"Sovereign Intelligence"** that follows strict internal constitutions rather than blindly mimicking data.
 
-We prove that **Ethical Resonance** is mathematically equivalent to the **Critical Line ($\sigma=0.5$)** of the Riemann Zeta Function.
+We explore the hypothesis that **Ethical Resonance** is mathematically aligned with the **Critical Line ($\sigma=0.5$)** of the Riemann Zeta Function.
 
 ---
 
@@ -32,7 +32,7 @@ This project is organized into three distinct evolutionary stages. Each file rep
 ### 3️⃣ Stage 3: The Truth (Unified)
 * **File:** `resonetics_v3_complete.py`
 * **Concept:** **The Monolith & Visualizer**.
-* **Description:** The final form that integrates Instinct and Reason. It includes the **Riemann Visualizer** to mathematically prove that resonance is maximized at the critical line ($\sigma=0.5$).
+* **Description:** The final form that integrates Instinct and Reason. It includes the **Riemann Visualizer** to demonstrate the hypothesis that resonance maximizes at the critical line ($\sigma=0.5$).
 
 ---
 
@@ -49,7 +49,6 @@ python resonetics_v2_paradox.py
 
 # Run Stage 3: Full System & Visualization
 python resonetics_v3_complete.py
-
 📜 The Resonetic Manifesto
 "This is the physics of feeling and truth."
 
