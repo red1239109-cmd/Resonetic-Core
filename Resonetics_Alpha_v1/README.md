@@ -43,3 +43,30 @@ The system demonstrates:
 git clone https://github.com/your-username/Resonetics_Alpha_v1.git
 cd Resonetics_Alpha_v1
 pip install -r requirements.txt
+
+## ⚖️ License & Pricing
+
+**Project Resonetics** follows a **Dual-License model** to ensure sustainability while keeping code accessible to everyone.
+
+### 1. Open Source (AGPL-3.0)
+> **Best for:** Students, Researchers, Open Source Projects.
+* **Condition:** If you modify this code or use it in your service, you **must open-source your entire project** under AGPL-3.0.
+* **Cost:** Free.
+
+### 2. Commercial License
+> **Best for:** Startups, Proprietary SaaS, Internal Enterprise Tools.
+* **Benefits:** You can keep your source code private (Closed Source) and receive legal assurance.
+* **Cost:** Paid license required.
+
+---
+
+### 🏷️ Pricing Tiers
+
+| Tier | Target Audience | Price | Note |
+| :--- | :--- | :--- | :--- |
+| **Indie / Startup** | < 10 Employees | **Free** | *Registration required |
+| **Growth / Corp** | 10+ Employees | **$500 ~ $5,000 / year** | Based on scale |
+
+> **"Free for the curious. Fair price for those who ship."**
+
+📩 **Contact for Licensing:** [red1239109@gmail.com](mailto:red1239109@gmail.com)
