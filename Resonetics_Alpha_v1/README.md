@@ -11,13 +11,13 @@ python resonance_detector.py
 ⚖️ License & Pricing
 Project Resonetics follows a Dual-License model to ensure sustainability while keeping code accessible.
 
-Open Source (AGPL-3.0)
+1. Open Source (AGPL-3.0)
 
 Best for: Students, Researchers, Open Source Projects.
 Cost: Free forever.
 Condition: Source code modifications and derivative works must be open-sourced under AGPL-3.0.
 
-Commercial License
+2. Commercial License
 
 Best for: Startups, Proprietary SaaS, Internal Enterprise Tools.
 Benefits:
