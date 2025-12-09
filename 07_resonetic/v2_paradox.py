@@ -15,8 +15,11 @@ class RefinementResult:
 class ParadoxRefinementEngine:
     """
     [Paradox v2] Recursive Critique Engine.
-    Iteratively refines thought processes until 'Meta-Convergence' is reached.
+    
+    NOTE: This is a minimal scaffold. Full recursive critique and convergence 
+    logic will be introduced in later alpha iterations.
     """
+   
     def __init__(self, llm_fn, max_iterations=3):
         self.llm_fn = llm_fn
         self.max_iterations = max_iterations
