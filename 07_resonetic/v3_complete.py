@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 class RiemannVisualizer:
     """
     [Visualizer v3] The Eye of Resonetics.
-    Mathematically proves that resonance maximizes at the critical line (0.5).
+    Explores a numerical hypothesis that resonance-like behavior peaks 
+    near the critical line (sigma = 0.5) using a toy model.
     """
     def __init__(self, precision=30):
         mp.mp.dps = precision
