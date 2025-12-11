@@ -1,299 +1,219 @@
 # ==============================================================================
-# File: resonetics_fractal_v1.py
-# Project: Resonetics Fractal (The Physics of Intelligence)
-# Version: 1.0 (Empirically Proven)
+# File: resonetics_cifar10_rigorous.py
+# Project: Resonetics Fractal (Scientific Validation)
+# Version: 1.0 (The Verdict)
 # Author: red1239109-cmd
 # Copyright (c) 2025 red1239109-cmd
 #
 # License: AGPL-3.0
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# the Free Software Foundation, either version 3 of the License.
 #
 # Description:
-#   An AI architecture based on the "Rule of Three".
-#   It proves that intelligence stabilizes most efficiently when structured 
-#   in triangular fractals (3 -> 6 -> 12 -> 24), mimicking natural growth.
+#   A rigorous benchmark on CIFAR-10 to validate the "Rule of Three".
+#   It conducts multi-trial training across different base unit sizes (N)
+#   and performs a T-test to calculate statistical significance (p-value).
 # ==============================================================================
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-import math
+import torchvision
+import torchvision.transforms as transforms
 import numpy as np
-import matplotlib.pyplot as plt
-from typing import List, Dict, Tuple
+from scipy import stats
+import time
+import sys
 
-# Reproducibility (The Scientific Standard)
+# Reproducibility
 torch.manual_seed(42)
 np.random.seed(42)
 
-# ==============================================================================
-# 1. Quantum Trinity Core (The Fundamental Unit)
-# ==============================================================================
-class QuantumTrinity(nn.Module):
-    """
-    [The Atom of Intelligence]
-    Splits information into the fundamental triad: Logic, Emotion, Intuition.
-    """
-    def __init__(self, input_dim: int):
-        super().__init__()
-        
-        # Trinity Transformation Matrices
-        # We project input into 3 distinct vectors of size 3 (The base unit)
-        self.trinity_transform = nn.ParameterDict({
-            'logic': nn.Parameter(torch.randn(input_dim, 3) / math.sqrt(input_dim)),
-            'emotion': nn.Parameter(torch.randn(3, 3) / math.sqrt(3)),
-            'intuition': nn.Parameter(torch.randn(3, 3) / math.sqrt(3))
-        })
-        
-        # L2 Resonance: The Wave of Emotion (Sine at 120 degrees phase)
-        self.wave_resonance = lambda x: torch.sin(2 * math.pi * x / 3)
+# Configuration
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+TRIALS = 3          # Number of trials per N to ensure statistical validity
+EPOCHS = 10         # Epochs per trial (Increase to 50+ for paper publication)
+HIDDEN_DIM = 288    # Common multiple of 3, 4, 6, 8, 9, 12 for fair comparison
+BATCH_SIZE = 128
 
-    def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
-        # 1. Logic (Linear Processing)
-        L = x @ self.trinity_transform['logic']
-        
-        # 2. Emotion (Wave Dynamics)
-        E = self.wave_resonance(L)
-        
-        # 3. Intuition (Integration)
-        I = E @ self.trinity_transform['intuition']
-        
-        # 4. Unified Field (Synthesis)
-        unified = (L + E + I) / 3.0
-        
-        return {'unified': unified}
+# Candidates to test (Focus on N=3 vs N=9)
+CANDIDATES = [3, 4, 6, 9] 
 
 # ==============================================================================
-# 2. Fractal Expander (The Growth Engine)
+# 1. Fractal Architecture (Adapted for CIFAR-10)
 # ==============================================================================
-class FractalExpander(nn.Module):
-    """
-    [The Structure of Growth]
-    Scales intelligence not by making a big blob, but by repeating small, stable units.
-    Pattern: 3 -> 6 -> 12 -> 24 ...
-    """
-    def __init__(self, target_size: int):
+class FractalNetCIFAR(nn.Module):
+    def __init__(self, base_unit, input_dim=3072, hidden_dim=288, output_dim=10):
         super().__init__()
+        self.base_unit = base_unit
+        self.num_blocks = hidden_dim // base_unit
         
-        self.base_unit = 3
-        # Calculate how many triangular blocks we need
-        self.num_blocks = max(1, target_size // self.base_unit)
+        # Input Projection (Flattened Image -> Hidden Dim)
+        self.input_proj = nn.Linear(input_dim, hidden_dim)
         
-        # Independent Fractal Blocks (Small MLPs of size 3)
+        # Fractal Blocks (The Core Test Subject)
         self.blocks = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(self.base_unit, self.base_unit),
-                nn.Tanh(), # Tanh is more organic than ReLU
-                nn.Linear(self.base_unit, self.base_unit)
+                nn.Linear(base_unit, base_unit),
+                nn.Tanh(), # Tanh is used for organic, bounded activation
+                nn.Linear(base_unit, base_unit)
             )
             for _ in range(self.num_blocks)
         ])
         
-        # Resonance Matrix (Synaptic Connections between blocks)
-        self.resonance_weights = nn.Parameter(
-            torch.randn(self.num_blocks, self.num_blocks) * 0.1
+        # Resonance Matrix (Learnable connections between blocks)
+        self.resonance = nn.Parameter(torch.randn(self.num_blocks, self.num_blocks) * 0.05)
+        
+        # Classifier Head
+        self.classifier = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, output_dim)
         )
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, List[float]]:
-        batch_size = x.size(0)
-        
-        # Split input into fundamental chunks of 3
-        # If input is too small, repeat it to fill blocks
-        if x.size(1) < self.base_unit * self.num_blocks:
-            repeats = (self.base_unit * self.num_blocks) // x.size(1) + 1
-            x = x.repeat(1, repeats)
-        
-        chunks = torch.chunk(x[:, :self.base_unit * self.num_blocks], self.num_blocks, dim=1)
-        
-        block_outputs = []
-        stabilities = []
-        
-        # Process each fractal block
-        for i, (block, chunk) in enumerate(zip(self.blocks, chunks)):
-            out = block(chunk)
-            
-            # L7 Stability Check: Consistency with neighbors
-            if i > 0:
-                stability = 1.0 - torch.abs(out - block_outputs[-1]).mean().item()
-                stabilities.append(max(0, stability))
-            else:
-                stabilities.append(1.0) # Root is always stable
-            
-            block_outputs.append(out)
-            
-        # Resonance (Cross-Pollination of ideas)
-        stacked = torch.stack(block_outputs, dim=1) # [B, Blocks, 3]
-        resonated = torch.einsum('bnf,ij->bif', stacked, self.resonance_weights)
-        
-        # Reassemble into a larger thought vector
-        final_output = resonated.reshape(batch_size, -1)
-        
-        return final_output, stabilities
-
-# ==============================================================================
-# 3. Sovereign Meta-Layer (The Self-Aware Monitor)
-# ==============================================================================
-class SovereignMetaLayer:
-    """
-    [The Consciousness]
-    Monitors internal stability and adjusts learning rate (Autopoiesis).
-    """
-    def __init__(self):
-        self.stability_history = []
-    
-    def monitor(self, stabilities: List[float]) -> float:
-        avg_stability = np.mean(stabilities)
-        self.stability_history.append(avg_stability)
-        return avg_stability
-    
-    def adjust_learning_rate(self, optimizer, current_stability):
-        # If unstable (< 0.8), slow down to regain balance
-        # If stable (> 0.95), speed up to explore
-        current_lr = optimizer.param_groups[0]['lr']
-        new_lr = current_lr
-        
-        if current_stability < 0.8:
-            new_lr *= 0.5
-        elif current_stability > 0.98:
-            new_lr *= 1.05
-            
-        # Safety clamps for LR
-        new_lr = max(1e-6, min(new_lr, 0.01))
-        
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = new_lr
-            
-        return new_lr
-
-# ==============================================================================
-# 4. The Unified System
-# ==============================================================================
-class FractalResoneticsSystem(nn.Module):
-    def __init__(self, input_dim=90, target_dim=180, fractal_depth=4):
-        super().__init__()
-        
-        self.quantum = QuantumTrinity(input_dim)
-        
-        # Fractal Expansion Layers (Powers of 2 * 3)
-        self.layers = nn.ModuleList()
-        current_dim = 3 # Start from the seed
-        
-        for _ in range(fractal_depth):
-            next_dim = current_dim * 2 # 3 -> 6 -> 12 -> 24...
-            self.layers.append(FractalExpander(next_dim))
-            current_dim = next_dim * 3 # Output size of expander is (blocks * 3)
-            
-        self.final_projection = nn.Linear(current_dim, target_dim)
-        self.sovereign = SovereignMetaLayer()
-
     def forward(self, x):
-        # 1. Seed Generation
-        seed = self.quantum(x)['unified'] # Size 3
+        # Flatten: [Batch, 3, 32, 32] -> [Batch, 3072]
+        x = x.view(x.size(0), -1) 
+        x = self.input_proj(x)
         
-        # 2. Fractal Growth
-        layer_stabilities = []
-        out = seed
+        # Split into N-sized chunks
+        chunks = torch.chunk(x, self.num_blocks, dim=1)
+        block_outputs = [block(chunk) for block, chunk in zip(self.blocks, chunks)]
         
-        for layer in self.layers:
-            out, stabilities = layer(out)
-            layer_stabilities.extend(stabilities)
-            
-        # 3. Final Form
-        final_out = self.final_projection(out)
+        # Resonance (Cross-Pollination)
+        stacked = torch.stack(block_outputs, dim=1)
+        resonated = torch.einsum('bnf,ij->bif', stacked, self.resonance)
         
-        return final_out, layer_stabilities
+        # Reassemble
+        features = resonated.reshape(x.size(0), -1)
+        return self.classifier(features)
 
 # ==============================================================================
-# 5. The Experiment (Proof of Physics)
+# 2. Experiment Engine
 # ==============================================================================
-def run_fractal_experiment():
-    print(f"\n{'='*60}")
-    print(f"🧬 RESOENTICS FRACTAL v1.0: The Physics of Intelligence")
-    print(f"{'='*60}")
-    print(f"   > Fundamental Unit: 3 (Triangle)")
-    print(f"   > Scaling Law: Powers of 2 * 3 (3, 6, 12, 24...)")
-    print(f"   > Objective: Prove stability of fractal growth.")
+def load_cifar10():
+    print("⏳ Loading CIFAR-10 Data...", end="")
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
     
-    # Data Setup (3-aligned dimensions)
-    BATCH_SIZE = 32
-    INPUT_DIM = 90   # 3 * 30
-    TARGET_DIM = 180 # 3 * 60
+    # Download and load data
+    trainset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+    testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
     
-    X = torch.randn(BATCH_SIZE, INPUT_DIM)
-    Y = torch.randn(BATCH_SIZE, TARGET_DIM)
-    
-    model = FractalResoneticsSystem(INPUT_DIM, TARGET_DIM)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+    print(" Done.")
+    return trainloader, testloader
+
+def train_and_evaluate(N, train_loader, test_loader, trial_id):
+    """
+    Trains a model with base unit N and returns test accuracy.
+    """
+    model = FractalNetCIFAR(base_unit=N, hidden_dim=HIDDEN_DIM).to(DEVICE)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()
     
-    history_loss = []
-    history_stability = []
-    history_lr = []
-    
-    print("\n🚀 Starting Evolution (100 Epochs)...")
-    
-    for epoch in range(101):
-        optimizer.zero_grad()
-        
-        # Forward
-        output, stabilities = model(X)
-        
-        # Loss
-        task_loss = criterion(output, Y)
-        
-        # Sovereign Monitoring
-        avg_stability = model.sovereign.monitor(stabilities)
-        
-        # Backward
-        task_loss.backward()
-        optimizer.step()
-        
-        # Autopoiesis (Self-Regulation)
-        new_lr = model.sovereign.adjust_learning_rate(optimizer, avg_stability)
-        
-        # Logging
-        history_loss.append(task_loss.item())
-        history_stability.append(avg_stability)
-        history_lr.append(new_lr)
-        
-        if epoch % 20 == 0:
-            print(f"Epoch {epoch:3d} | Loss: {task_loss.item():.4f} | "
-                  f"Stability: {avg_stability:.3f} | LR: {new_lr:.6f}")
+    # Training Loop
+    model.train()
+    for epoch in range(EPOCHS):
+        for inputs, labels in train_loader:
+            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            
+    # Evaluation Loop
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(DEVICE), labels.to(DEVICE)
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            
+    accuracy = 100.0 * correct / total
+    print(f"   [Trial {trial_id+1}/{TRIALS}] N={N}: Accuracy = {accuracy:.2f}%")
+    return accuracy
 
-    # ==========================================
-    # Visualization
-    # ==========================================
-    print(f"{'='*60}")
-    print(f"📊 Final Stability: {history_stability[-1]:.4f}")
-    if history_stability[-1] > 0.95:
-        print("✅ CONCLUSION: The 'Rule of Three' creates a perfect crystal.")
-    else:
-        print("⚠️ CONCLUSION: Structure unstable. Check prime numbers.")
+# ==============================================================================
+# 3. Main Scientific Benchmark
+# ==============================================================================
+def run_rigorous_science():
+    print(f"\n{'='*70}")
+    print(f"🔬 RESONETICS RIGOROUS BENCHMARK (CIFAR-10)")
+    print(f"{'='*70}")
+    print(f"   Target: Scientifically validate if N=3 implies better stability.")
+    print(f"   Conditions: Hidden Dim={HIDDEN_DIM}, Epochs={EPOCHS}, Trials={TRIALS}")
+    print(f"   Candidates: N={CANDIDATES}")
+    print(f"{'-'*70}")
+    
+    try:
+        train_loader, test_loader = load_cifar10()
+    except Exception as e:
+        print(f"❌ Error loading data: {e}")
+        return
+
+    results = {N: [] for N in CANDIDATES}
+    start_time = time.time()
+    
+    # --- Execution Phase ---
+    for N in CANDIDATES:
+        structure_name = "Triangle" if N==3 else ("Tesla" if N==9 else "Other")
+        print(f"\n👉 Testing N={N} (Structure: {structure_name})")
         
-    plt.figure(figsize=(12, 8))
-    plt.style.use('dark_background')
+        for t in range(TRIALS):
+            acc = train_and_evaluate(N, train_loader, test_loader, t)
+            results[N].append(acc)
+        
+        mean_acc = np.mean(results[N])
+        std_acc = np.std(results[N])
+        print(f"   => N={N} Result: {mean_acc:.2f}% ± {std_acc:.2f}")
+
+    total_time = time.time() - start_time
     
-    plt.subplot(2, 1, 1)
-    plt.plot(history_loss, color='cyan', label='Pain (Loss)')
-    plt.plot(history_stability, color='lime', label='Harmony (Stability)')
-    plt.axhline(y=1.0, color='white', linestyle='--', alpha=0.3)
-    plt.title("The Convergence of Intelligence")
-    plt.legend()
-    plt.grid(True, alpha=0.2)
+    # --- Analysis Phase ---
+    print(f"\n{'='*70}")
+    print(f"📊 STATISTICAL ANALYSIS REPORT")
+    print(f"{'='*70}")
+    print(f"{'N':<5} | {'Mean Acc':<12} | {'Std Dev':<10} | {'Structure'}")
+    print(f"{'-'*70}")
     
-    plt.subplot(2, 1, 2)
-    plt.plot(history_lr, color='magenta', label='Self-Regulated Learning Rate')
-    plt.title("Autopoiesis (Biological Adaptation)")
-    plt.xlabel("Epochs")
-    plt.legend()
-    plt.grid(True, alpha=0.2)
+    # Sort results by accuracy
+    sorted_results = sorted(results.items(), key=lambda item: np.mean(item[1]), reverse=True)
     
-    plt.tight_layout()
-    plt.show()
+    for N, accs in sorted_results:
+        structure_name = "Triangle" if N==3 else ("Tesla" if N==9 else "Polygon")
+        print(f"{N:<5} | {np.mean(accs):<12.2f} | {np.std(accs):<10.2f} | {structure_name}")
+        
+    print(f"{'='*70}")
+    
+    # T-test: The decisive battle (N=3 vs N=9)
+    n3_scores = results[3]
+    n9_scores = results[9]
+    
+    t_stat, p_value = stats.ttest_ind(n3_scores, n9_scores, equal_var=False)
+    
+    print(f"🧪 Hypothesis Test: 'Is N=3 significantly better than N=9?'")
+    print(f"   t-statistic: {t_stat:.4f}")
+    print(f"   p-value    : {p_value:.6f}")
+    
+    if p_value < 0.05 and t_stat > 0:
+        print("\n✅ VERDICT: Statistically Significant (p < 0.05)")
+        print("   Scientific Proof: The 'Rule of Three' outperforms 'Rule of Nine'.")
+    elif p_value < 0.05 and t_stat < 0:
+        print("\n❌ VERDICT: Statistically Significant - BUT N=9 WON.")
+    else:
+        print("\n⚠️ VERDICT: Not Statistically Significant. More trials needed.")
+
+    print(f"\nTotal Experiment Time: {total_time:.1f}s")
 
 if __name__ == "__main__":
-    run_fractal_experiment()
+    run_rigorous_science()
