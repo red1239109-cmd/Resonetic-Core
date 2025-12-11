@@ -26,7 +26,7 @@ This benchmark compares three distinct generative modes:
 
 1.  Clone the repository:
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/Resonetic-Cores.git](https://github.com/YOUR_USERNAME/Resonetic-Cores.git)
+    git clone [https://github.com/red1239109-cmd/Resonetic-Cores.git](https://github.com/red1239109-cmd/Resonetic-Cores.git)
     cd Resonetic-Cores
     ```
 
