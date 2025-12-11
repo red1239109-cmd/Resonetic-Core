@@ -1,4 +1,4 @@
-# Resonetics v3.3: The Entropy Gardener
+# Resonetics v3.3.2: The Entropy Gardener
 
 ![Version](https://img.shields.io/badge/version-3.3-blue) ![Python](https://img.shields.io/badge/python-3.x-green) ![License](https://img.shields.io/badge/license-AGPL--3.0-red)
 
