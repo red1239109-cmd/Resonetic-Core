@@ -1,16 +1,16 @@
 # ==============================================================================
-# File: resonetics_v3_3_final.py
+# File: resonetics_v3_3_2_final.py
 # Project: Resonetics (The Entropy Gardener)
-# Version: 3.3 (Final Production Release)
+# Version: 3.3.2 (Isolation Death Prevention)
 # Description: A physics-informed, bio-mimetic AI simulation.
 #              Agents fight against entropy using Lamarckian evolution.
 #
-# Key Features:
-#   1. Vectorized Physics (NumPy optimized cleaning)
-#   2. Correct Coordinate System (Row/Col vs X/Y fix)
-#   3. Phase-Based Architecture (Plan -> Conflict -> Commit)
-#   4. CSV Data Logging (Real-time tracking)
-#   5. Suicide Prevention & Energy-Based Conflict Resolution
+# Key Improvements (v3.3.2):
+#   1. Energy Balance Fixed (min_population: 15, clean_reward: 3.0)
+#   2. Smart Idle Logic (tries cleaning before giving up)
+#   3. Adaptive Mutation Scaling (for larger networks)
+#   4. Buffer-based CSV Writing (reduced I/O)
+#   5. [NEW] Isolation Death Prevention (emergency low-cost movement)
 #
 # License: AGPL-3.0
 # ==============================================================================
@@ -29,17 +29,19 @@ import os
 CONFIG = {
     "grid_size": 60,
     "init_agents": 25,
-    "view_size": 7,          # Local vision window (odd number)
-    "feature_dim": 8,        # CNN feature maps
-    "hidden_dim": 16,        # LSTM hidden state size
+    "view_size": 7,
+    "feature_dim": 8,
+    "hidden_dim": 16,
     "mutation_rate": 0.02,
     "move_cost": 0.5,
-    "clean_reward": 2.5,     # Energy gained per unit of entropy removed
+    "emergency_move_cost": 0.1,  # [NEW] Discounted emergency move
+    "clean_reward": 3.0,
     "reproduce_cost": 40.0,
     "reproduce_threshold": 80.0,
-    "min_population": 5,
+    "min_population": 15,
     "max_population": 80,
-    "log_file": "resonetics_data.csv"
+    "log_file": "resonetics_data.csv",
+    "log_buffer_size": 50
 }
 
 # ---------------------------------------------------------
@@ -60,14 +62,12 @@ class CompactBrain(nn.Module):
             nn.MaxPool2d(2), # 5x5 -> 2x2
             nn.Flatten()
         )
-        # 2x2 * feature_dim
         self.fc_dim = CONFIG["feature_dim"] * 4
         self.lstm = nn.LSTM(self.fc_dim, CONFIG["hidden_dim"], batch_first=True)
-        self.policy = nn.Linear(CONFIG["hidden_dim"], 6) # Up, Down, Left, Right, Clean, Repro
+        self.policy = nn.Linear(CONFIG["hidden_dim"], 6)
 
     def forward(self, x, hidden):
-        # x shape: (1, 1, 7, 7)
-        feat = self.visual(x).unsqueeze(1) # Add seq len dim: (1, 1, feature_dim)
+        feat = self.visual(x).unsqueeze(1)
         out, new_hidden = self.lstm(feat, hidden)
         logits = self.policy(out[:, -1, :])
         return torch.softmax(logits, dim=-1), new_hidden
@@ -75,18 +75,18 @@ class CompactBrain(nn.Module):
 class Agent:
     def __init__(self, id, row, col):
         self.id = id
-        self.row = row  # Vertical position (matrix row)
-        self.col = col  # Horizontal position (matrix col)
+        self.row = row
+        self.col = col
         self.brain = CompactBrain()
-        self.hidden = None  # LSTM state
+        self.hidden = None
         self.energy = 50.0
         self.age = 0
-        self.planned_action = 5 # Default: Idle
+        self.planned_action = 5
+        self.is_emergency_move = False  # [NEW] Flag for emergency movement
 
     def perceive(self, view_tensor):
         """Processes visual input and determines the next action."""
         with torch.no_grad():
-            # Explicit LSTM Initialization for safety
             if self.hidden is None:
                 h0 = torch.zeros(1, 1, CONFIG["hidden_dim"])
                 c0 = torch.zeros(1, 1, CONFIG["hidden_dim"])
@@ -101,33 +101,58 @@ class Agent:
 class ResoneticsEngine:
     def __init__(self):
         self.size = CONFIG["grid_size"]
-        # World Grid: 0.0 (Order) to 1.0 (Chaos/Entropy)
         self.grid = np.zeros((self.size, self.size), dtype=np.float32)
         
-        # Initialize Agents
         self.agents = [
             Agent(i, np.random.randint(0, self.size), np.random.randint(0, self.size)) 
             for i in range(CONFIG["init_agents"])
         ]
         self.id_counter = CONFIG["init_agents"]
         self.gen = 0
+        
+        # CSV Buffer
+        self.log_buffer = []
+        
+        # [NEW] Statistics
+        self.emergency_moves = 0
+        self.isolation_saves = 0
 
     def get_view(self, row, col):
         """Extracts a local view with periodic boundary conditions (Torus)."""
         s = CONFIG["view_size"] // 2
         rows = np.arange(row - s, row + s + 1) % self.size
         cols = np.arange(col - s, col + s + 1) % self.size
-        # Numpy fancy indexing
         view = self.grid[np.ix_(rows, cols)]
         return torch.from_numpy(view).float().unsqueeze(0).unsqueeze(0)
+
+    def find_dirty_neighbor(self, agent):
+        """
+        [NEW] Find the dirtiest neighboring cell for emergency movement.
+        Returns: (action_index, dirt_amount) or (None, 0)
+        """
+        best_action = None
+        best_dirt = 0.0
+        
+        for action, (dr, dc) in enumerate([(-1,0), (1,0), (0,-1), (0,1)]):
+            nr = (agent.row + dr) % self.size
+            nc = (agent.col + dc) % self.size
+            dirt = self.grid[nr, nc]
+            
+            if dirt > best_dirt:
+                best_dirt = dirt
+                best_action = action
+        
+        return best_action, best_dirt
 
     def step(self):
         """Executes one simulation step using Phase-Based Logic."""
         
+        # Reset emergency counter
+        self.emergency_moves = 0
+        
         # --- Phase 0: Vitality Check & Respawn ---
         self.agents = [a for a in self.agents if a.energy > 0]
         
-        # Conservation of Life (Minimum Population)
         if len(self.agents) < CONFIG["min_population"]:
             missing = CONFIG["min_population"] - len(self.agents)
             for _ in range(missing):
@@ -137,29 +162,52 @@ class ResoneticsEngine:
                                          np.random.randint(0, self.size)))
 
         # --- Phase 1: Planning (Read-Only) ---
-        moves = defaultdict(list) # Target (row, col) -> [Agents]
+        moves = defaultdict(list)
         cleaners = []
         breeders = []
 
         for agent in self.agents:
-            # Suicide Prevention: Force Idle if energy is too low to move
+            agent.is_emergency_move = False
+            
+            # [IMPROVED] Smart Survival Logic with Isolation Prevention
             if agent.energy <= CONFIG["move_cost"] + 0.1:
-                agent.planned_action = 5 
+                current_dirt = self.grid[agent.row, agent.col]
+                
+                # Priority 1: Clean if there's dirt here
+                if current_dirt > 0.1:
+                    agent.planned_action = 4
+                    
+                # Priority 2: Emergency move to dirty area
+                elif agent.energy >= CONFIG["emergency_move_cost"] + 0.1:
+                    best_dir, best_dirt = self.find_dirty_neighbor(agent)
+                    
+                    # Found a dirty neighbor worth moving to
+                    if best_dir is not None and best_dirt > 0.2:
+                        agent.planned_action = best_dir
+                        agent.is_emergency_move = True
+                        self.emergency_moves += 1
+                        self.isolation_saves += 1
+                    else:
+                        # No good options, idle
+                        agent.planned_action = 5
+                else:
+                    # Too weak even for emergency move
+                    agent.planned_action = 5
             else:
+                # Normal operation: use brain
                 agent.perceive(self.get_view(agent.row, agent.col))
 
             act = agent.planned_action
             target = (agent.row, agent.col)
 
-            # Action Mapping: 0:Up, 1:Down, 2:Left, 3:Right
             if act < 4: 
                 d_row, d_col = [(-1,0), (1,0), (0,-1), (0,1)][act]
                 target = ((agent.row + d_row) % self.size, (agent.col + d_col) % self.size)
                 moves[target].append(agent)
-            elif act == 4: # Clean
+            elif act == 4:
                 moves[target].append(agent)
                 cleaners.append(agent)
-            elif act == 5: # Reproduce
+            elif act == 5:
                 moves[target].append(agent)
                 if agent.energy > CONFIG["reproduce_threshold"]:
                     breeders.append(agent)
@@ -167,32 +215,31 @@ class ResoneticsEngine:
         # --- Phase 2: Conflict Resolution (Move) ---
         new_positions = {}
         for pos, candidates in moves.items():
-            # Survival of the Fittest: Highest energy agent takes the spot
             winner = max(candidates, key=lambda a: a.energy)
             new_positions[winner.id] = pos
             
-            # Losers get a collision penalty
             for loser in candidates:
                 if loser != winner:
-                    loser.energy -= 0.1 
+                    loser.energy -= 0.1
 
         for agent in self.agents:
             if agent.id in new_positions:
                 nr, nc = new_positions[agent.id]
-                # Apply move cost only if position actually changed
                 if (nr, nc) != (agent.row, agent.col):
-                    agent.energy -= CONFIG["move_cost"]
+                    # [NEW] Apply emergency discount
+                    if agent.is_emergency_move:
+                        agent.energy -= CONFIG["emergency_move_cost"]
+                    else:
+                        agent.energy -= CONFIG["move_cost"]
                 agent.row, agent.col = nr, nc
             
-            agent.energy -= 0.1 # Metabolic Tax (Time cost)
+            agent.energy -= 0.1
             agent.age += 1
 
         # --- Phase 3: Physics (Vectorized Update) ---
-        # 1. Natural Entropy Increase (Thermodynamics)
         noise = np.random.rand(self.size, self.size) * 0.005
         self.grid = np.clip(self.grid + noise, 0, 1)
 
-        # 2. Agent Cleaning (Vectorized)
         if cleaners:
             clean_mask = np.zeros_like(self.grid)
             cleaner_count_map = defaultdict(int)
@@ -201,22 +248,16 @@ class ResoneticsEngine:
                 clean_mask[agent.row, agent.col] = 1
                 cleaner_count_map[(agent.row, agent.col)] += 1
 
-            # Determine how much dirt can be removed (Max 0.5 per step)
             dirt_to_clean = np.minimum(self.grid, 0.5) * clean_mask
-            
-            # Update Grid
             self.grid = np.clip(self.grid - dirt_to_clean, 0, 1)
 
-            # Distribute Energy Rewards
             for agent in cleaners:
-                # Share reward if multiple agents clean the same spot
                 count = cleaner_count_map[(agent.row, agent.col)]
                 reward = dirt_to_clean[agent.row, agent.col] * CONFIG["clean_reward"]
-                agent.energy += reward / count 
+                agent.energy += reward / count
         
         # --- Phase 4: Reproduction (Lamarckian Evolution) ---
         if len(self.agents) < CONFIG["max_population"]:
-            # Prioritize high-energy parents
             breeders.sort(key=lambda a: a.energy, reverse=True)
             
             for parent in breeders:
@@ -225,19 +266,38 @@ class ResoneticsEngine:
                 if parent.energy > CONFIG["reproduce_cost"]:
                     parent.energy -= CONFIG["reproduce_cost"]
                     self.id_counter += 1
-                    # Spawn child at same location
                     child = Agent(self.id_counter, parent.row, parent.col)
                     
-                    # Direct Weight Copy (Fast & Memory Efficient)
+                    # Adaptive Mutation Scaling
                     with torch.no_grad():
                         for cp, pp in zip(child.brain.parameters(), parent.brain.parameters()):
                             cp.data.copy_(pp.data)
-                            cp.add_(torch.randn_like(cp) * CONFIG["mutation_rate"])
+                            
+                            fan_in = cp.size(0) if cp.ndim > 1 else 1
+                            scale = CONFIG["mutation_rate"] / np.sqrt(max(fan_in, 1))
+                            cp.add_(torch.randn_like(cp) * scale)
                     
                     self.agents.append(child)
 
         self.gen += 1
         return self.grid, self.agents
+
+    def log_to_buffer(self, avg_energy, total_entropy):
+        """Buffer CSV data and write periodically."""
+        self.log_buffer.append(
+            f"{self.gen},{len(self.agents)},{avg_energy:.2f},{total_entropy:.2f},"
+            f"{self.emergency_moves},{self.isolation_saves}\n"
+        )
+        
+        if len(self.log_buffer) >= CONFIG["log_buffer_size"]:
+            self.flush_buffer()
+    
+    def flush_buffer(self):
+        """Write buffered data to CSV."""
+        if self.log_buffer:
+            with open(CONFIG["log_file"], 'a') as f:
+                f.writelines(self.log_buffer)
+            self.log_buffer.clear()
 
 # ---------------------------------------------------------
 # [Visualization & Logging]
@@ -245,36 +305,29 @@ class ResoneticsEngine:
 def run_simulation():
     engine = ResoneticsEngine()
     
-    # Initialize CSV Log
-    if os.path.exists(CONFIG["log_file"]): os.remove(CONFIG["log_file"])
+    # Initialize CSV with new columns
+    if os.path.exists(CONFIG["log_file"]): 
+        os.remove(CONFIG["log_file"])
     with open(CONFIG["log_file"], 'w') as f:
-        f.write("Gen,Population,Avg_Energy,Total_Entropy\n")
+        f.write("Gen,Population,Avg_Energy,Total_Entropy,Emergency_Moves,Isolation_Saves\n")
 
     # Setup Plot
     fig, ax = plt.subplots(figsize=(9, 9))
     plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
     
-    # Render Grid (Magma: Black=Order, Red/Yellow=Chaos)
     im = ax.imshow(engine.grid, cmap='magma', vmin=0, vmax=1, animated=True)
-    
-    # Render Agents
-    # Note: scatter(x, y) expects (col, row)
     scatter = ax.scatter([], [], s=40, edgecolors='white', animated=True)
     
-    # Status Text
     text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='white', 
-                   fontsize=12, fontweight='bold',
-                   bbox=dict(facecolor='black', alpha=0.5))
+                   fontsize=11, fontweight='bold',
+                   bbox=dict(facecolor='black', alpha=0.6))
     
     def update(frame):
         grid, agents = engine.step()
         im.set_data(grid)
         
         if agents:
-            # Correct Coordinate Mapping: [col, row] for Scatter
             offsets = np.array([[a.col, a.row] for a in agents])
-            
-            # Color based on energy (Red=Low, Green=High)
             energies = np.array([a.energy for a in agents])
             normalized_e = np.clip(energies / 100, 0, 1)
             colors = plt.cm.RdYlGn(normalized_e)
@@ -284,31 +337,43 @@ def run_simulation():
         else:
             scatter.set_offsets(np.zeros((0, 2)))
 
-        # Stats Calculation
         avg_e = np.mean([a.energy for a in agents]) if agents else 0
         total_entropy = np.sum(grid)
         
-        # CSV Logging
-        with open(CONFIG["log_file"], 'a') as f:
-            f.write(f"{engine.gen},{len(agents)},{avg_e:.2f},{total_entropy:.2f}\n")
+        engine.log_to_buffer(avg_e, total_entropy)
 
-        # HUD Update
+        # [NEW] Enhanced HUD with emergency stats
         stats = (f"GENERATION: {engine.gen:04d}\n"
                  f"POPULATION: {len(agents):02d}\n"
                  f"AVG ENERGY: {avg_e:6.1f}\n"
-                 f"ENTROPY   : {total_entropy:7.1f}")
+                 f"ENTROPY   : {total_entropy:7.1f}\n"
+                 f"EMERGENCIES: {engine.emergency_moves:02d}\n"
+                 f"SAVED     : {engine.isolation_saves:04d}")
         text.set_text(stats)
         
         return im, scatter, text
 
-    print(f"🌱 [Resonetics v3.3] Simulation Started...")
+    print(f"🌱 [Resonetics v3.3.2] Simulation Started...")
+    print(f"   ✅ Min Population: {CONFIG['min_population']} (Energy Balanced)")
+    print(f"   ✅ Clean Reward: {CONFIG['clean_reward']}")
+    print(f"   ✅ Smart Idle Logic (Cleaning Priority)")
+    print(f"   ✅ Adaptive Mutation Scaling")
+    print(f"   ✅ Buffered CSV Logging")
+    print(f"   ✅ [NEW] Isolation Death Prevention")
+    print(f"   - Emergency Move Cost: {CONFIG['emergency_move_cost']} (80% discount!)")
     print(f"   - Logging data to: {CONFIG['log_file']}")
-    print(f"   - Watch as agents learn to organize against chaos.")
+    print(f"\n💡 Watch for emergency moves when agents are trapped!")
     
     ani = animation.FuncAnimation(fig, update, frames=None, interval=50, blit=True)
-    plt.title("Resonetics v3.3: The Entropy Gardener (Final Release)")
+    plt.title("Resonetics v3.3.2: The Entropy Gardener\n(Isolation Death Prevention Active)")
     plt.axis('off')
-    plt.show()
+    
+    try:
+        plt.show()
+    finally:
+        engine.flush_buffer()
+        print(f"\n✅ Simulation ended.")
+        print(f"📊 Total isolation saves: {engine.isolation_saves}")
 
 if __name__ == "__main__":
     run_simulation()
