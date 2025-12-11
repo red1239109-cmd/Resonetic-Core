@@ -207,4 +207,3 @@ def run():
 if __name__ == "__main__":
     run()
 
-이렇게 하면되지?
