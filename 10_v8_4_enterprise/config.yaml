@@ -1,0 +1,17 @@
+system:
+  seed: 42
+  steps: 2000
+  log_interval: 10
+
+optimizer:
+  base_lr: 0.01
+
+prophet:
+  risk_thresholds:
+    panic: 0.5
+    alert: 0.2
+  lr_multipliers:
+    panic: 5.0
+    alert: 2.0
+    cruise: 0.5
+  buffer_size: 10
