@@ -67,23 +67,3 @@ python resonetics_v8_4_enterprise.py
 # 4. Run The Gardener (RL Env Demo)
 python resonetics_k8s_v4_4_final.py
 
-⚖️ License & Contact
-Dual-License Model
-
-Open Source (AGPL-3.0):
-
-Free for Students, Researchers, and Open Source Projects.
-
-Condition: If you use this code, you must open-source your entire project under AGPL 3.0.
-
-Commercial License:
-
-For Startups, Proprietary SaaS, and Internal Enterprise Tools.
-
-Benefits: Keep your source code private (Closed Source) & Legal assurance.
-
-Cost: Paid license required.
-
-Author: red1239109-cmd
-
-Contact: red1239109@gmail.com
