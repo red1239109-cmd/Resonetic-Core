@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Environments
+venv/
+env/
+
+# Training Logs & Checkpoints (Ray RLLib creates these)
+ray_results/
+gardener_checkpoint/
+gardener_final/
+*.png
+*.log
