@@ -1,5 +1,3 @@
----
-
 ## 🕰️ The Origins: SincLock
 
 Before verifying the "Rule of Three" with fractals, we developed **SincLock**, a Neuro-Symbolic prototype designed to force neural networks to "think in waves" rather than steps.
