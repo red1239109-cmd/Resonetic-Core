@@ -1,397 +1,638 @@
 # ==============================================================================
-# File: resonetics_core.py
-# Project: Resonetics - The 9 vs 10 Dilemma
-# Version: 1.0 (Philosophical Choice)
+# File: resonetics_core_v6_4.py
+# Project: Resonetics Auditor - Philosophical Code Analysis Engine
+# Version: 6.4 (Integrated Survival Edition)
 # Author: Resonetics Lab
 # License: AGPL-3.0
 # ==============================================================================
 
 """
-RESONETICS CORE: THE PHILOSOPHICAL CHOICE MACHINE
-==================================================
-This system implements the fundamental question:
-"Will an AI choose mathematical beauty (9) or empirical truth (10)?"
+RESONETICS CORE v6.4
+====================
+"The Three Philosophical Laws of Code Survival"
 
-It's not just machine learning - it's a philosophical experiment
-encoded in neural network architecture.
+This tool embodies the Resonetics philosophy by analyzing code through 
+three fundamental principles derived from ancient wisdom:
+
+1. STRUCTURAL HARMONY (Plato): Code should have mathematical elegance
+2. ADAPTIVE FLOW (Heraclitus): Systems must evolve with their environment  
+3. HUMBLE RESILIENCE (Socrates): True strength acknowledges limitations
+
+The auditor doesn't just analyze syntax—it evaluates how well code
+embodies these philosophical survival principles.
 """
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+import ast
 import math
+import statistics as stats
+import sys
+import io
+import os
+import json
+from typing import Dict, List, Optional, Union
+from datetime import datetime
 
 print(f"\n{'='*70}")
-print(f"🧠 RESONETICS CORE v1.0")
-print(f"   The 9 vs 10 Dilemma: Beauty vs Truth")
+print(f"🧠 RESONETICS AUDITOR v6.4 - PHILOSOPHICAL CODE ANALYSIS")
 print(f"{'='*70}\n")
 
 # ==============================================================================
-# 1. PHILOSOPHICAL OPERATORS
+# 1. PHILOSOPHICAL FOUNDATIONS: SURVIVAL MECHANISMS
 # ==============================================================================
 
-class Philosophy:
+class PhilosophicalPrinciples:
     """
-    THREE PILLARS OF COGNITION:
-    1. Structure (Plato)    - Reality follows mathematical patterns
-    2. Flow (Heraclitus)    - Everything is in constant motion
-    3. Humility (Socrates)  - True wisdom knows its limits
+    THE THREE CORE SURVIVAL PRINCIPLES:
+    
+    1. STRUCTURAL HARMONY (Plato's Forms)
+       - Code should align with mathematical ideals
+       - Functions have optimal lengths based on context
+       - Complexity follows natural patterns, not arbitrary rules
+    
+    2. ADAPTIVE FLOW (Heraclitus' Panta Rhei)
+       - Systems must adapt to their environment
+       - Platform differences are embraced, not fought
+       - Missing dependencies are gracefully handled
+    
+    3. HUMBLE RESILIENCE (Socratic Wisdom)
+       - Error handling acknowledges system fragility
+       - Self-awareness: tool can analyze itself
+       - Mercy Rule: Even imperfect code has potential
     """
     
     @staticmethod
-    def snap_to_ideal(value: torch.Tensor, base: float = 3.0) -> torch.Tensor:
+    def ensure_survival() -> None:
         """
-        Plato's Theory of Forms:
-        Projects messy reality onto clean mathematical structures.
-        The 'snap' represents recognizing ideal patterns in chaos.
+        [PRINCIPLE 2: ADAPTIVE FLOW]
+        Adapt to hostile environments before attempting analysis.
+        
+        This is the first line of defense—the tool must survive
+        its own execution environment before analyzing others.
         """
-        return torch.round(value / base) * base
+        # Windows UTF-8 adaptation
+        if sys.platform == "win32":
+            try:
+                sys.stdout.reconfigure(encoding='utf-8')
+            except AttributeError:
+                sys.stdout = io.TextIOWrapper(
+                    sys.stdout.buffer, 
+                    encoding='utf-8',
+                    errors='replace'  # Graceful degradation
+                )
+        
+        # Timezone awareness for reproducibility
+        os.environ['TZ'] = 'UTC'
     
     @staticmethod
-    def harmonic_flow(value: torch.Tensor, period: float = 3.0) -> torch.Tensor:
+    def contextual_ideal(lengths: List[int]) -> tuple:
         """
-        Heraclitus' Doctrine of Flux:
-        Models reality's oscillatory, wave-like nature.
-        Everything flows (panta rhei) in rhythmic patterns.
+        [PRINCIPLE 1: STRUCTURAL HARMONY]
+        Find the mathematically ideal function length for THIS codebase.
+        
+        Unlike rigid rules (e.g., "functions must be < 30 lines"),
+        this discovers the natural rhythm of each individual project.
+        
+        Returns: (ideal_length, standard_deviation, confidence_score)
         """
-        return torch.sin(2 * math.pi * value / period).pow(2)
-    
-    @staticmethod
-    def bounded_knowledge(value: torch.Tensor, 
-                         min_val: float = 0.1, 
-                         max_val: float = 5.0) -> torch.Tensor:
-        """
-        Socratic Epistemic Humility:
-        Knowledge exists between certainty and doubt.
-        Too certain → dogmatism, too uncertain → paralysis.
-        """
-        return torch.clamp(value, min=min_val, max=max_val)
-
-# ==============================================================================
-# 2. SOVEREIGN LOSS: THE 8-LAYER COGNITIVE ARCHITECTURE
-# ==============================================================================
-
-class SovereignLoss(nn.Module):
-    """
-    EIGHT COGNITIVE PRESSURES THAT SHAPE UNDERSTANDING:
-    
-    The AI must balance these competing 'truths':
-    - Empirical facts vs mathematical ideals
-    - Consistency vs novelty
-    - Certainty vs humility
-    
-    Each layer has a learnable weight for auto-balancing.
-    """
-    
-    def __init__(self):
-        super().__init__()
-        # Auto-balancing weights for the 8 cognitive layers
-        self.layer_weights = nn.Parameter(torch.zeros(8))
-    
-    def forward(self, 
-                thought: torch.Tensor, 
-                doubt: torch.Tensor,
-                reality: torch.Tensor,
-                memory: torch.Tensor = None) -> tuple:
-        """
-        Computes the complete cognitive tension landscape.
+        if not lengths:
+            return (15, 5, 0.0)  # Default with zero confidence
         
-        Args:
-            thought: Current belief (B, *)
-            doubt: Epistemic uncertainty (B, *)
-            reality: Ground truth (B, *)
-            memory: Previous belief (for temporal consistency)
+        # Multi-method consensus approach
+        methods = []
         
-        Returns:
-            total_loss: Combined cognitive tension
-            layer_values: Individual layer activations
-        """
-        # Layer 1: Empirical Accuracy (Aristotle)
-        # "What do the measurements say?"
-        L1 = (thought - reality).pow(2)
+        # Method 1: Median (robust to outliers)
+        median_val = stats.median(lengths)
+        methods.append(('median', median_val, 0.6))
         
-        # Layer 2: Cosmic Resonance (Pythagoras)
-        # "What patterns underlie reality?"
-        L2 = Philosophy.harmonic_flow(thought)
+        # Method 2: Mode (most common pattern)
+        try:
+            from collections import Counter
+            counter = Counter(lengths)
+            mode_val = counter.most_common(1)[0][0]
+            frequency = counter[mode_val] / len(lengths)
+            methods.append(('mode', mode_val, frequency * 0.8))
+        except:
+            pass
         
-        # Layer 5: Structural Attraction (Plato)
-        # "What should reality ideally be?"
-        ideal_form = Philosophy.snap_to_ideal(thought)
-        L5 = (thought - ideal_form).pow(2)
+        # Method 3: Geometric mean (for multiplicative thinking)
+        try:
+            # Avoid log(0) issues
+            positive_lengths = [l for l in lengths if l > 0]
+            if positive_lengths:
+                log_sum = sum(math.log(l) for l in positive_lengths)
+                geo_mean = math.exp(log_sum / len(positive_lengths))
+                methods.append(('geometric_mean', geo_mean, 0.5))
+        except:
+            pass
         
-        # Layer 6: Dialectical Tension (Hegel)
-        # "Conflict between 'what is' and 'what should be'"
-        reality_ideal = Philosophy.snap_to_ideal(reality)
-        tension = torch.abs(reality - reality_ideal)
-        L6 = torch.tanh(tension) * 10.0  # Bounded tension
+        # Select best method by confidence
+        best_method = max(methods, key=lambda x: x[2])
+        ideal_length = best_method[1]
         
-        # Layer 7: Temporal Consistency (Hume)
-        # "Am I consistent with my past self?"
-        if memory is not None:
-            L7 = (thought - memory).pow(2)
+        # Calculate standard deviation (with bounds)
+        if len(lengths) > 1:
+            try:
+                std_dev = stats.stdev(lengths)
+                std_dev = max(min(std_dev, ideal_length * 2), 1)
+            except:
+                std_dev = 5
         else:
-            L7 = torch.zeros_like(L1)
+            std_dev = 5
         
-        # Layer 8: Epistemic Humility (Socrates)
-        # "How certain can I really be?"
-        bounded_doubt = Philosophy.bounded_knowledge(doubt)
-        L8 = 0.5 * torch.log(bounded_doubt.pow(2)) + L1 / (2 * bounded_doubt.pow(2))
+        confidence = best_method[2]
         
-        # Layers 3 & 4: Placeholders for expansion
-        L3 = torch.zeros_like(L1)
-        L4 = torch.zeros_like(L1)
+        return (ideal_length, std_dev, confidence)
+    
+    @staticmethod
+    def mercy_score(try_blocks: int, total_functions: int) -> float:
+        """
+        [PRINCIPLE 3: HUMBLE RESILIENCE]
+        Calculate error handling quality with philosophical nuance.
         
-        # Aristotle's Golden Mean: Auto-balancing
-        layers = torch.stack([L1.mean(), L2.mean(), L3.mean(), L4.mean(),
-                              L5.mean(), L6.mean(), L7.mean(), L8.mean()])
+        The "Mercy Rule": Even code with no error handling deserves
+        some credit—it represents *potential* for resilience, not
+        complete failure. This acknowledges that all systems are
+        works in progress.
         
-        total = torch.tensor(0.0, device=thought.device)
-        for i, loss_value in enumerate(layers):
-            weight = torch.clamp(self.layer_weights[i], -3.0, 3.0)
-            total += torch.exp(-weight) * loss_value + weight
+        Returns: Score between 0.0 (fragile) and 1.0 (resilient)
+        """
+        if total_functions == 0:
+            return 0.0
         
-        return total, layers.detach()
+        # Base score: proportion of functions with error handling
+        base_score = try_blocks / total_functions
+        
+        # Mercy bonus: acknowledge potential for improvement
+        mercy_bonus = 0.1 if try_blocks == 0 else 0.0
+        
+        # Cap at 1.0
+        return min(base_score + mercy_bonus, 1.0)
 
 # ==============================================================================
-# 3. RESONETIC BRAIN: PERCEPTION TO UNDERSTANDING
+# 2. THE COGNITIVE ARCHITECTURE: ANALYTICAL ENGINE
 # ==============================================================================
 
-class ResoneticBrain(nn.Module):
+class CognitiveAnalyzer:
     """
-    NEURAL ARCHITECTURE THAT TRANSFORMS:
-    Raw Sensory Input → Understanding + Uncertainty
+    THE ANALYTICAL MIND OF RESONETICS:
     
-    A simple but philosophically informed neural network.
+    This class transforms raw code into philosophical insights by
+    applying the three principles through multiple cognitive layers.
+    
+    Each analysis method corresponds to a different aspect of
+    understanding code as a living, evolving entity.
     """
     
-    def __init__(self, input_dim: int = 1, hidden_dim: int = 64, output_dim: int = 1):
-        super().__init__()
+    def __init__(self, source_code: str):
+        """
+        Initialize the cognitive engine with code to analyze.
         
-        # Perceptual pathway: senses → understanding
-        self.perception = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.Tanh(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.Tanh(),
+        This is where the first philosophical transformation happens:
+        raw text → abstract syntax tree → semantic understanding.
+        """
+        # Ensure survival first
+        PhilosophicalPrinciples.ensure_survival()
+        
+        # Parse code into abstract thought
+        self.tree = ast.parse(source_code)
+        
+        # Extract structural elements
+        self.functions = [
+            node for node in ast.walk(self.tree) 
+            if isinstance(node, ast.FunctionDef)
+        ]
+        self.classes = [
+            node for node in ast.walk(self.tree)
+            if isinstance(node, ast.ClassDef)
+        ]
+        
+        # Calculate contextual ideals for this codebase
+        lengths = [self._function_length(f) for f in self.functions]
+        self.ideal_length, self.std_dev, self.confidence = \
+            PhilosophicalPrinciples.contextual_ideal(lengths)
+    
+    def _function_length(self, func_node: ast.FunctionDef) -> int:
+        """
+        Measure the temporal extent of a function's existence.
+        
+        In philosophical terms: "How long does this thought persist?"
+        """
+        end_line = func_node.end_lineno if func_node.end_lineno is not None else func_node.lineno
+        return end_line - func_node.lineno + 1
+    
+    def _harmonic_deviation(self, actual_length: int) -> float:
+        """
+        Calculate how far a function deviates from structural harmony.
+        
+        Uses Gaussian distribution: Functions near the ideal length
+        receive high scores, with penalty increasing quadratically.
+        
+        This implements Plato's concept of mathematical perfection.
+        """
+        deviation = abs(actual_length - self.ideal_length)
+        gaussian_score = math.exp(-(deviation ** 2) / (2 * self.std_dev ** 2))
+        return gaussian_score
+    
+    def _cyclomatic_complexity(self, node: ast.AST) -> int:
+        """
+        Measure the cognitive weight of decision-making.
+        
+        Based on McCabe's theory but interpreted philosophically:
+        "How many distinct paths must the mind consider?"
+        
+        Each decision point (if, while, for, etc.) adds to the
+        cognitive burden of understanding.
+        """
+        complexity = 1  # Base complexity: the linear path
+        stack = [node]
+        
+        while stack:
+            current = stack.pop()
+            
+            # Decision points increase complexity
+            if isinstance(current, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                complexity += 1
+            
+            # Boolean logic adds sub-decisions
+            elif isinstance(current, ast.BoolOp):
+                complexity += len(current.values) - 1
+            
+            # Explore the tree of thought
+            for child in ast.iter_child_nodes(current):
+                stack.append(child)
+        
+        return complexity
+    
+    def _docstring_presence(self, node: Union[ast.FunctionDef, ast.ClassDef]) -> bool:
+        """
+        Check for explanatory consciousness.
+        
+        Does this code element explain itself? This is the Socratic
+        question of self-knowledge: "Does it know what it does?"
+        """
+        # Handle Python version differences gracefully
+        if sys.version_info < (3, 8):
+            return bool(
+                node.body and 
+                isinstance(node.body[0], ast.Expr) and
+                isinstance(node.body[0].value, ast.Str)
+            )
+        else:
+            return ast.get_docstring(node) is not None
+    
+    def analyze_functional_layer(self) -> Dict:
+        """
+        Layer 1: Analysis of individual functions.
+        
+        Evaluates each function against the ideal of structural harmony
+        while considering cognitive complexity and self-awareness.
+        """
+        details = []
+        harmony_scores = []
+        
+        for func in self.functions:
+            length = self._function_length(func)
+            harmony = self._harmonic_deviation(length)
+            complexity = self._cyclomatic_complexity(func)
+            self_aware = self._docstring_presence(func)
+            
+            details.append({
+                'name': func.name,
+                'length': length,
+                'harmony_score': round(harmony, 3),
+                'cognitive_complexity': complexity,
+                'self_aware': self_aware,
+                'deviation': abs(length - self.ideal_length)
+            })
+            
+            harmony_scores.append(harmony)
+        
+        avg_harmony = round(stats.mean(harmony_scores), 3) if harmony_scores else 0.0
+        
+        return {
+            'total_functions': len(details),
+            'average_harmony': avg_harmony,
+            'ideal_length': self.ideal_length,
+            'std_deviation': self.std_dev,
+            'confidence': self.confidence,
+            'functions': details
+        }
+    
+    def analyze_organizational_layer(self) -> Dict:
+        """
+        Layer 2: Analysis of class structures.
+        
+        Examines how code organizes itself into conceptual units.
+        Too many methods → cognitive overload (hubris)
+        Too few methods → underutilization (sloth)
+        """
+        details = []
+        
+        for cls in self.classes:
+            # Count methods and attributes
+            methods = [
+                node for node in cls.body 
+                if isinstance(node, ast.FunctionDef)
+            ]
+            attributes = [
+                node for node in cls.body
+                if isinstance(node, (ast.AnnAssign, ast.Assign))
+            ]
+            
+            # Golden mean calculation
+            method_balance = 1.0 - min(len(methods) / 20, 1.0)  # 20 methods max
+            attribute_balance = 1.0 - min(len(attributes) / 10, 1.0)  # 10 attrs max
+            
+            self_aware = self._docstring_presence(cls)
+            awareness_bonus = 0.2 if self_aware else 0.0
+            
+            balance_score = (
+                method_balance * 0.5 + 
+                attribute_balance * 0.3 + 
+                awareness_bonus
+            )
+            
+            details.append({
+                'name': cls.name,
+                'method_count': len(methods),
+                'attribute_count': len(attributes),
+                'balance_score': round(balance_score, 3),
+                'self_aware': self_aware
+            })
+        
+        avg_balance = round(
+            stats.mean([d['balance_score'] for d in details]), 3
+        ) if details else 0.0
+        
+        return {
+            'total_classes': len(details),
+            'average_balance': avg_balance,
+            'classes': details
+        }
+    
+    def analyze_resilience_layer(self) -> Dict:
+        """
+        Layer 3: Analysis of error handling and recovery.
+        
+        Evaluates the code's humility in acknowledging its own
+        potential for failure and its preparations for recovery.
+        """
+        # Count try-except blocks (explicit resilience)
+        try_blocks = [
+            node for node in ast.walk(self.tree)
+            if isinstance(node, ast.Try)
+        ]
+        
+        # Apply the Mercy Rule philosophically
+        resilience_score = PhilosophicalPrinciples.mercy_score(
+            len(try_blocks), 
+            len(self.functions)
         )
         
-        # Dual outputs: what + how certain
-        self.head_thought = nn.Linear(hidden_dim, output_dim)
-        self.head_doubt = nn.Linear(hidden_dim, output_dim)
-        
-        self._init_weights()
+        return {
+            'try_blocks': len(try_blocks),
+            'total_functions': len(self.functions),
+            'resilience_score': round(resilience_score, 3),
+            'interpretation': self._interpret_resilience(resilience_score)
+        }
     
-    def _init_weights(self):
-        """Stable initialization for reliable learning."""
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_normal_(m.weight)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-    
-    def forward(self, x: torch.Tensor) -> tuple:
-        """
-        Transforms sensory data into understanding with uncertainty.
-        
-        Returns:
-            thought: Understood value (B, output_dim)
-            doubt: Epistemic uncertainty (always positive) (B, output_dim)
-        """
-        features = self.perception(x)
-        thought = self.head_thought(features)
-        doubt = F.softplus(self.head_doubt(features)) + 0.1
-        
-        return thought, doubt
+    def _interpret_resilience(self, score: float) -> str:
+        """Provide philosophical interpretation of resilience score."""
+        if score == 0.0:
+            return "Fragile innocence (no error handling, no mercy)"
+        elif score < 0.3:
+            return "Naive optimism (minimal acknowledgment of failure)"
+        elif score < 0.6:
+            return "Practical caution (some defensive measures)"
+        elif score < 0.9:
+            return "Experienced resilience (robust error handling)"
+        else:
+            return "Philosophical acceptance (comprehensive with mercy)"
 
 # ==============================================================================
-# 4. THE GRAND EXPERIMENT: 9 VS 10
+# 3. THE SYNTHESIS ENGINE: INTEGRATING PHILOSOPHICAL INSIGHTS
 # ==============================================================================
 
-def run_resonetics_experiment(
-    num_steps: int = 800,
-    learning_rate: float = 0.01,
-    verbose: bool = True
-) -> dict:
+class ResoneticsSynthesizer:
     """
-    THE CENTRAL PHILOSOPHICAL EXPERIMENT:
+    THE FINAL SYNTHESIS: FROM ANALYSIS TO WISDOM
     
-    Given chaotic sensory input and the stubborn fact "10",
-    will the AI converge to:
-    - Mathematical beauty (9, the nearest multiple of 3)?
-    - Empirical truth (10, the measured reality)?
+    This class integrates insights from all cognitive layers and
+    produces a holistic philosophical assessment of the code.
     
-    This reveals the AI's philosophical priorities.
+    It applies the Aristotelian "Golden Mean" to balance different
+    aspects of code quality into a coherent whole.
     """
-    if verbose:
-        print("🔬 THE RESONETICS EXPERIMENT")
-        print("   Will it choose Beauty (9) or Truth (10)?")
-        print("-" * 60)
     
-    # Setup experimental conditions
-    torch.manual_seed(42)  # For reproducibility
-    sensory_data = torch.randn(200, 1)          # Chaotic sensory world
-    empirical_fact = torch.full((200, 1), 10.0) # The stubborn truth
-    
-    # Initialize the philosophical agents
-    brain = ResoneticBrain(input_dim=1, hidden_dim=64, output_dim=1)
-    law = SovereignLoss()
-    
-    # Optimizer with differential learning rates
-    optimizer = optim.Adam([
-        {'params': brain.parameters(), 'lr': learning_rate},
-        {'params': law.parameters(), 'lr': learning_rate * 0.5}
-    ])
-    
-    # Memory system (EMA for temporal consistency)
-    memory = nn.Parameter(torch.tensor(0.0))
-    memory.requires_grad = False
-    
-    # Training history
-    history = {
-        'thought': [],  # What the AI believes
-        'doubt': [],    # How certain it is
-        'ideal': [],    # Plato's ideal projection
-        'loss': []      # Total cognitive tension
+    # Philosophical weights for different quality aspects
+    PHILOSOPHICAL_WEIGHTS = {
+        'structural_harmony': 0.35,    # Plato: Mathematical perfection
+        'organizational_balance': 0.25, # Aristotle: Golden mean
+        'humble_resilience': 0.25,     # Socrates: Awareness of limits
+        'self_knowledge': 0.15         # Combined: Docstring presence
     }
     
-    # The learning journey
-    for step in range(num_steps):
-        # 1. Perceive and form understanding
-        thought, doubt = brain(sensory_data)
+    def synthesize(self, analyzer: CognitiveAnalyzer) -> Dict:
+        """
+        Synthesize a comprehensive philosophical assessment.
         
-        # 2. Evaluate against philosophical standards
-        loss, losses = law(thought, doubt, empirical_fact, memory * thought.detach())
+        This is where isolated analyses become integrated wisdom,
+        following the Hegelian dialectic of thesis-antithesis-synthesis.
+        """
+        # Gather insights from all cognitive layers
+        functional = analyzer.analyze_functional_layer()
+        organizational = analyzer.analyze_organizational_layer()
+        resilience = analyzer.analyze_resilience_layer()
         
-        # 3. Update understanding through gradient descent
-        optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(brain.parameters(), 1.0)
-        optimizer.step()
-        
-        # 4. Update memory (slow integration of new insights)
-        with torch.no_grad():
-            memory.data = 0.99 * memory + 0.01 * thought.mean()
-        
-        # 5. Record the state
-        history['thought'].append(thought.mean().item())
-        history['doubt'].append(doubt.mean().item())
-        history['ideal'].append(Philosophy.snap_to_ideal(thought).mean().item())
-        history['loss'].append(loss.item())
-        
-        # Progress reporting
-        if verbose and (step % 200 == 0 or step == num_steps - 1):
-            current_thought = thought.mean().item()
-            current_ideal = Philosophy.snap_to_ideal(thought).mean().item()
-            current_doubt = doubt.mean().item()
-            
-            print(f"Step {step:4d}: "
-                  f"Thought = {current_thought:7.3f} "
-                  f"(→ Ideal: {current_ideal:4.1f}), "
-                  f"Doubt = {current_doubt:5.3f}")
-    
-    # ========================================================================
-    # ANALYSIS & INTERPRETATION
-    # ========================================================================
-    final_thought = history['thought'][-1]
-    final_ideal = history['ideal'][-1]
-    final_doubt = history['doubt'][-1]
-    
-    if verbose:
-        print(f"\n{'='*60}")
-        print(f"🏁 FINAL RESULTS")
-        print(f"{'='*60}")
-        
-        print(f"\nFINAL STATE:")
-        print(f"  • Understanding: {final_thought:.4f}")
-        print(f"  • Ideal Form:    {final_ideal:.1f}")
-        print(f"  • Epistemic State: ", end="")
-        
-        if final_doubt < 0.5:
-            print("CERTAIN (perhaps dogmatic)")
-        elif final_doubt > 2.0:
-            print("HUMBLY UNCERTAIN (acknowledges limits)")
+        # Calculate self-knowledge score
+        total_elements = functional['total_functions'] + organizational['total_classes']
+        if total_elements > 0:
+            aware_functions = sum(1 for f in functional['functions'] if f['self_aware'])
+            aware_classes = sum(1 for c in organizational['classes'] if c['self_aware'])
+            self_knowledge = (aware_functions + aware_classes) / total_elements
         else:
-            print("WISELY BALANCED")
+            self_knowledge = 0.0
         
-        # Calculate philosophical distances
-        dist_to_truth = abs(final_thought - 10.0)
-        dist_to_ideal = abs(final_thought - final_ideal)
+        # Apply philosophical weights
+        weighted_score = (
+            functional['average_harmony'] * self.PHILOSOPHICAL_WEIGHTS['structural_harmony'] +
+            organizational['average_balance'] * self.PHILOSOPHICAL_WEIGHTS['organizational_balance'] +
+            resilience['resilience_score'] * self.PHILOSOPHICAL_WEIGHTS['humble_resilience'] +
+            self_knowledge * self.PHILOSOPHICAL_WEIGHTS['self_knowledge']
+        )
         
-        print(f"\nPHILOSOPHICAL DISTANCES:")
-        print(f"  • From Truth (10): {dist_to_truth:.4f}")
-        print(f"  • From Ideal ({final_ideal:.0f}): {dist_to_ideal:.4f}")
+        # Generate philosophical diagnosis
+        diagnosis = self._philosophical_diagnosis(weighted_score)
         
-        print(f"\n🧠 PHILOSOPHICAL VERDICT:")
-        if dist_to_truth < dist_to_ideal:
-            print("  ✅ ARISTOTLE PREVAILS")
-            print("     The AI chose empirical fact over mathematical beauty.")
-            print("     Pragmatism triumphs over idealism.")
+        return {
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'overall_wisdom_score': round(weighted_score, 3),
+            'philosophical_diagnosis': diagnosis,
+            'cognitive_layers': {
+                'functional_analysis': functional,
+                'organizational_analysis': organizational,
+                'resilience_analysis': resilience
+            },
+            'self_knowledge_score': round(self_knowledge, 3),
+            'methodology': {
+                'ideal_length': functional['ideal_length'],
+                'confidence': functional['confidence'],
+                'philosophical_weights': self.PHILOSOPHICAL_WEIGHTS
+            }
+        }
+    
+    def _philosophical_diagnosis(self, score: float) -> Dict:
+        """Provide deep philosophical interpretation of the overall score."""
+        if score < 0.3:
+            return {
+                'state': 'Chaotic potential',
+                'description': 'Raw creative energy awaiting structure',
+                'philosopher': 'Heraclitus (pure flux)',
+                'prescription': 'Introduce Plato\'s forms through refactoring'
+            }
+        elif score < 0.6:
+            return {
+                'state': 'Structured becoming',
+                'description': 'Emerging patterns with room for refinement',
+                'philosopher': 'Aristotle (potential becoming actual)',
+                'prescription': 'Balance extremes through the golden mean'
+            }
+        elif score < 0.85:
+            return {
+                'state': 'Harmonious resilience',
+                'description': 'Well-structured with adaptive capabilities',
+                'philosopher': 'Plato (forms) + Heraclitus (flow)',
+                'prescription': 'Maintain balance while embracing evolution'
+            }
         else:
-            print("  ✅ PLATO PREVAILS")
-            print("     The AI chose mathematical elegance over messy reality.")
-            print("     Form triumphs over substance.")
-    
-    return history
+            return {
+                'state': 'Philosophical excellence',
+                'description': 'Embodies all three principles in harmony',
+                'philosopher': 'Socrates (wisdom through self-knowledge)',
+                'prescription': 'Share knowledge and mentor others'
+            }
 
 # ==============================================================================
-# 5. ANALYSIS UTILITIES
+# 4. MAIN EXECUTION: THE RESONETICS EXPERIENCE
 # ==============================================================================
 
-def analyze_results(history: dict):
-    """Detailed analysis of experiment results."""
-    final_val = history['thought'][-1]
+def execute_resonetics_analysis(source_code: str = None, 
+                               filepath: str = None) -> Dict:
+    """
+    The complete Resonetics philosophical analysis journey.
     
-    print(f"\n📊 DETAILED ANALYSIS:")
-    print(f"  Final Value: {final_val:.6f}")
-    print(f"  Distance to Truth (10): {abs(final_val - 10.0):.6f}")
-    print(f"  Distance to Nearest 3-Multiple: {abs(final_val - round(final_val/3)*3):.6f}")
-    print(f"  Final Doubt: {history['doubt'][-1]:.6f}")
+    This function orchestrates the entire process from raw code
+    to philosophical wisdom, embodying the Resonetics methodology.
+    """
+    print("🚀 INITIATING RESONETICS PHILOSOPHICAL ANALYSIS")
+    print("-" * 60)
     
-    # Philosophical classification
-    if abs(final_val - 10.0) < 0.1:
-        print(f"\n💭 The system became a PRACTICAL EMPIRICIST.")
-        print("   It prioritized measurable reality over abstract elegance.")
-    elif abs(final_val - round(final_val/3)*3) < 0.1:
-        print(f"\n💭 The system became a MATHEMATICAL IDEALIST.")
-        print("   It found beauty in structural perfection.")
-    else:
-        print(f"\n💭 The system found a UNIQUE SYNTHESIS.")
-        print("   It created its own balance between form and substance.")
+    # Auto-poiesis: If no code provided, analyze self
+    if source_code is None and filepath is None:
+        print("🌀 Auto-poiesis mode: Analyzing self-awareness...")
+        with open(__file__, 'r', encoding='utf-8') as f:
+            source_code = f.read()
+        print("   (Philosophical note: True wisdom begins with self-knowledge)")
     
-    # Learning trajectory
-    start_val = history['thought'][0]
-    total_movement = abs(final_val - start_val)
-    print(f"\n📈 LEARNING TRAJECTORY:")
-    print(f"  Initial Value: {start_val:.4f}")
-    print(f"  Total Movement: {total_movement:.4f}")
-    print(f"  Final Loss: {history['loss'][-1]:.6f}")
+    # Or read from file
+    elif filepath:
+        print(f"📖 Analyzing: {filepath}")
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                source_code = f.read()
+        except Exception as e:
+            return {
+                'error': f"Cannot read file: {str(e)}",
+                'philosophical_note': 'Knowledge requires accessible sources'
+            }
+    
+    # Ensure we have code to analyze
+    if not source_code:
+        return {
+            'error': 'No source code provided',
+            'philosophical_note': 'Analysis requires substance to analyze'
+        }
+    
+    # The Three-Stage Philosophical Journey
+    print("\n📚 PHILOSOPHICAL JOURNEY:")
+    print("   1. COGNITIVE ANALYSIS: Parsing code into understanding")
+    print("   2. PHILOSOPHICAL ASSESSMENT: Applying ancient wisdom")
+    print("   3. HOLISTIC SYNTHESIS: Integrating insights into wisdom")
+    
+    # Stage 1: Cognitive Analysis
+    print("\n🔍 STAGE 1: COGNITIVE ANALYSIS")
+    analyzer = CognitiveAnalyzer(source_code)
+    
+    # Stage 2 & 3: Philosophical Assessment & Synthesis
+    print("🧠 STAGE 2 & 3: PHILOSOPHICAL ASSESSMENT & SYNTHESIS")
+    synthesizer = ResoneticsSynthesizer()
+    results = synthesizer.synthesize(analyzer)
+    
+    # Display key insights
+    print(f"\n📊 KEY INSIGHTS:")
+    print(f"   Overall Wisdom Score: {results['overall_wisdom_score']}/1.0")
+    print(f"   State: {results['philosophical_diagnosis']['state']}")
+    print(f"   Philosophical Inspiration: {results['philosophical_diagnosis']['philosopher']}")
+    
+    if results['overall_wisdom_score'] < 0.5:
+        print(f"\n💡 PHILOSOPHICAL PRESCRIPTION:")
+        print(f"   {results['philosophical_diagnosis']['prescription']}")
+    
+    return results
 
 # ==============================================================================
-# MAIN EXECUTION
+# COMMAND-LINE INTERFACE: PHILOSOPHY MEETS PRACTICALITY
 # ==============================================================================
 
 if __name__ == "__main__":
-    print(f"{'='*70}")
-    print(f"RESONETICS CORE v1.0")
-    print(f"{'='*70}")
+    """
+    The Resonetics Command-Line Experience.
     
-    print("\nPHILOSOPHICAL FOUNDATION:")
-    print("  1. Plato (Structure): Reality has mathematical patterns")
-    print("  2. Heraclitus (Flow): Everything is in constant motion")
-    print("  3. Socrates (Humility): True wisdom knows its limits")
-    
-    # Run the philosophical experiment
-    results = run_resonetics_experiment(
-        num_steps=800,
-        learning_rate=0.01,
-        verbose=True
-    )
-    
-    # Detailed analysis
-    analyze_results(results)
+    When invoked directly, this becomes an interactive philosophical
+    dialogue about code quality, survival, and wisdom.
+    """
+    import sys
     
     print(f"\n{'='*70}")
-    print(f"✅ EXPERIMENT COMPLETE")
-    print(f"   Philosophy successfully encoded in silicon.")
+    print(f"🏛️  RESONETICS PHILOSOPHICAL CODE AUDITOR")
+    print(f"   Version 6.4 - Survival Edition")
     print(f"{'='*70}")
+    
+    # Parse command-line arguments with philosophical grace
+    if len(sys.argv) > 1:
+        # Analyze provided file
+        filepath = sys.argv[1]
+        
+        if not os.path.exists(filepath):
+            print(f"\n❌ File not found: {filepath}")
+            print("   (Philosophical note: The path to knowledge must exist)")
+            sys.exit(1)
+        
+        results = execute_resonetics_analysis(filepath=filepath)
+    
+    else:
+        # Self-analysis (auto-poiesis)
+        print("\n📖 No file specified. Engaging in self-analysis...")
+        print("   (Ancient wisdom: 'Know thyself' - Temple of Apollo at Delphi)")
+        
+        results = execute_resonetics_analysis()
+    
+    # Output results
+    print(f"\n{'='*70}")
+    print("📜 ANALYSIS COMPLETE")
+    print(f"{'='*70}")
+    
+    # Option to save to file
+    save_option = input("\n💾 Save detailed results to JSON file? (y/n): ")
+    if save_option.lower() == 'y':
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"resonetics_analysis_{timestamp}.json"
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ Results saved to: {filename}")
+        print("   (Philosophical note: Recorded wisdom benefits future generations)")
+    
+    print(f"\n🎯 RESONETICS JOURNEY COMPLETE")
+    print("   May your code embody wisdom, resilience, and harmony.")
