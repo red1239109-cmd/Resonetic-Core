@@ -41,50 +41,81 @@ import math
 
 class SovereignLoss(nn.Module):
     """
-    [Core v1] The 8-Layer Constitution.
-    Encodes physical equilibrium (0.5) and structural quantization (Rule of 3).
+    [Core v1] The 8-Layer Constitution (Stabilized).
     
     Philosophical Foundation:
     1. L1: Reality Alignment (Gravity towards truth)
-    2. L2: Wave Nature (Quantum wave behavior)  
-    3. L3: Phase Boundary (System stability limits)
-    4. L4: Micro-Grid (Fine-grained structure)
-    5. L5: Quantization (Rule of Three preference)
-    6. L6: Paradox Layer (Entropy prevents death)
-    7. L7: Self-Consistency (Temporal coherence)
-    8. L8: Humility (Uncertainty awareness)
+    2. L2: Wave Nature (Cosmic Resonance)
+    3. L3: Placeholder (Reserved for Phase Boundary)
+    4. L4: Placeholder (Reserved for Micro-Grid)
+    5. L5: Structural Attraction (Rule of Three)
+    6. L6: Dialectical Tension (Energy from Contradiction)
+    7. L7: Self-Consistency (Narrative Identity via Teacher)
+    8. L8: Epistemic Humility (Gaussian NLL)
     """
     def __init__(self):
         super().__init__()
+        # Auto-balancing parameters (Log-space for numerical stability)
         self.log_vars = nn.Parameter(torch.zeros(8))
-        self.prev_pred = None 
 
-    def forward(self, pred, sigma, target):
-        def snap_to_3x(val): return torch.round(val / 3.0) * 3.0
+    def forward(self, pred, sigma, target, teacher_pred=None):
+        """
+        Args:
+            pred: Student's prediction (Logic)
+            sigma: Uncertainty (Doubt)
+            target: Ground Truth (Reality)
+            teacher_pred: EMA Teacher's prediction (Past Self for L7)
+        """
+        # --- [1. Physical Foundation] ---
+        # L1: Reality Gap (MSE)
+        L1 = (pred - target).pow(2)
         
-        # 1. Physical Foundation
-        L1 = (pred - target).pow(2)                   # Gravity (Target)
-        L2 = torch.sin(2 * math.pi * pred / 3).pow(2) # Wave Nature
-        L3 = torch.relu(1.5 - pred).pow(2)            # Phase Boundary
-        L4 = torch.sin(math.pi * pred).pow(2)         # Micro-Grid
+        # L2: Resonance Frequency (Wave Nature)
+        L2 = torch.sin(2 * math.pi * pred / 3.0).pow(2)
         
-        # 2. Structural Thinking
-        L5 = (pred - snap_to_3x(pred)).pow(2)         # Quantization
-        # Paradox Layer: Entropy prevents system death
-        L6 = torch.clamp(-torch.log(L5 + 1e-6), min=-20.0, max=20.0)
+        # --- [2. Structural Thinking] ---
+        # L5: Quantization (Rule of Three)
+        snap_target = torch.round(pred / 3.0) * 3.0
+        dist_struct = torch.abs(pred - snap_target)
+        L5 = dist_struct.pow(2)
         
-        # 3. Meta-Cognition
-        if self.prev_pred is None: L7 = torch.zeros_like(pred)
-        else: L7 = (pred - self.prev_pred).abs()      # Self-Consistency
-        self.prev_pred = pred.detach()
-        
-        sigma_clamped = torch.clamp(sigma, min=1e-3, max=5.0)
-        L8 = -dist.Normal(pred, sigma_clamped).entropy() * 0.1 # Humility
+        # [FIX] L6: Tension Energy (Log Singularity -> Tanh Tension)
+        # Prevents explosion when structure matches perfectly.
+        L6 = torch.tanh(torch.abs(target - snap_target)) * 10.0
 
-        # Auto-Balancing Weights
+        # --- [3. Meta-Cognition] ---
+        # [FIX] L7: Self-Consistency (Stateful -> Teacher based)
+        # Compares current thought with the stable "Teacher" self to prevent batch mixing.
+        if teacher_pred is not None:
+            L7 = (pred - teacher_pred).pow(2) 
+        else:
+            L7 = torch.zeros_like(pred)
+
+        # [FIX] L8: Humility (Entropy -> Gaussian NLL)
+        # Safety Clamps: Prevent overconfidence (<0.1) and evasion (>5.0)
+        sigma_safe = torch.clamp(sigma, min=0.1, max=5.0)
+        var = sigma_safe.pow(2)
+        L8 = 0.5 * torch.log(var) + (pred - target).pow(2) / (2 * var)
+
+        # Placeholders
+        L3 = torch.zeros_like(L1)
+        L4 = torch.zeros_like(L1)
+
+        # --- [Auto-Balancing Mechanism] ---
         losses = [L1, L2, L3, L4, L5, L6, L7, L8]
-        total_loss = sum(torch.exp(-self.log_vars[i]) * L.mean() + self.log_vars[i] for i, L in enumerate(losses))
+        total_loss = 0
+        
+        for i, L in enumerate(losses):
+            # Safety Clamp for weights (-5 ~ 5) to prevent gradient explosion
+            safe_log_var = torch.clamp(self.log_vars[i], min=-5.0, max=5.0)
+            precision = torch.exp(-safe_log_var)
+            
+            # Loss = Precision * TaskLoss + Regularization
+            total_loss += precision * L.mean() + safe_log_var
+
         return total_loss
 
 if __name__ == "__main__":
     print("🌌 [v1] Numeric Core (Instinct) Online.")
+    print("   > System Check: Sovereign Loss Initialized.")
+    print("   > Logic Version: Grandmaster (Stabilized)")
