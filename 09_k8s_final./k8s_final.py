@@ -1,4 +1,3 @@
-```python
 # ==============================================================================
 # File: resonetics_k8s_v4_5_fixed.py
 # Version: 4.5 (Optimized Gardener)
@@ -355,4 +354,3 @@ def test_environment():
 
 if __name__ == "__main__":
     test_environment()
-```
