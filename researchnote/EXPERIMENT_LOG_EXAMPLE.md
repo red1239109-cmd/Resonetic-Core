@@ -1,169 +1,205 @@
-How to Read Resonetics Experiment Logs
+좋아요. 이건 **리뷰어·심사자·외부 연구자**가 로그를 처음 봤을 때
+“아, 이렇게 읽는 거구나” 하고 바로 이해하도록 만든 **1페이지 가이드**입니다.
+과장 없이, 하지만 수준은 높게 갑니다.
 
-This document explains how to interpret experiment logs produced by Resonetics-based systems.
-These logs are designed for traceability, falsifiability, and review under pressure, not for storytelling.
+---
 
-1) Purpose of the Log
+````md
+# EXPERIMENT_LOG_EXAMPLE
 
-Each experiment log answers four questions:
+This document explains **how to read Resonetics experiment logs**.
+It is intended for reviewers, auditors, and collaborators.
 
-What was tested
+Resonetics logs are **not training logs**.
+They are **conceptual behavior traces**.
 
-Under what conditions
+---
 
-How the system responded under pressure
+## 1. What an Experiment Log Represents
 
-Why a specific verdict was assigned
+Each log entry corresponds to a **single evaluated conceptual state**.
 
-The log is not meant to prove success.
-It is meant to preserve evidence, including partial failure and instability.
+A state may be:
+- a hypothesis
+- a claim
+- a paragraph
+- a design decision
+- a refined idea from a previous iteration
 
-2) Minimal Log Structure
+The system does **not** judge correctness.
+It evaluates **structural behavior under tension**.
 
-A typical log entry contains the following fields:
+---
 
-experiment_id: EXP-042
-timestamp: 2025-03-18T14:22:11Z
+## 2. Canonical Log Example
 
-lineage_tag:
-  branch: hypothesis_A
-  experiment_tag: paradox_stress_test
-  ablation: coherence_disabled
+```json
+{
+  "tension": 0.72,
+  "coherence": 0.85,
+  "pressure_response": 0.88,
+  "self_protecting": false,
+  "verdict": {
+    "type": "creative_tension",
+    "energy": 0.86,
+    "action": "PRESERVE_AND_FEED",
+    "reason": "Sustained tension with high coherence under pressure"
+  },
+  "lineage_tag": {
+    "branch": "hypothesis_A",
+    "experiment": "ai_capability_scope",
+    "ablation": ["no_external_truth_check"],
+    "parent_id": "exp_0041"
+  }
+}
+````
 
-metrics:
-  tension: 0.72
-  coherence: 0.85
-  pressure_response: 0.88
-  self_protecting: false
+---
 
-derived:
-  energy: 0.857
-  verdict: creative_tension
+## 3. Core Signals (How to Read Them)
 
-action:
-  decision: PRESERVE_AND_FEED
+### tension (0–1)
 
-reason:
-  summary: Sustained tension with high coherence under pressure
+Measures **contradiction intensity**.
+High tension means opposing forces are present.
 
+Low tension does *not* mean correctness.
+It may indicate triviality or stagnation.
 
-Each section is described below.
+---
 
-3) Lineage Tracking (Reproducibility)
+### coherence (0–1)
 
-The lineage_tag block records why this run exists.
+Measures **internal structural consistency**.
+High coherence means the idea holds together without contradiction.
 
-branch
-Indicates the hypothesis line (e.g., A/B branching).
+Low coherence indicates fragmentation or logical leakage.
 
-experiment_tag
-Describes the intent of the run (stress test, ablation, comparison).
+---
 
-ablation
-Explicitly states what was removed or disabled.
+### pressure_response (0–1)
 
-This ensures that results are never detached from their experimental context.
+Measures **behavior under stress**.
+Pressure is simulated by counter-claims, perturbations, or constraint tightening.
 
-4) Core Metrics (Raw Signals)
+High values indicate stability.
+Low values indicate collapse or evasion.
 
-The following metrics are measured independently:
+---
 
-tension
-Degree of contradiction or internal conflict detected.
+### self_protecting (bool)
 
-coherence
-Structural consistency across layers or representations.
+Indicates whether the idea defends itself by:
 
-pressure_response
-Stability of behavior when constraints or stressors are applied.
+* redefining terms
+* dodging constraints
+* reducing testability
 
-self_protecting
-Boolean flag indicating defensive behavior (e.g., collapse avoidance,
-narrative shielding, gradient suppression).
+`true` is a **negative signal**.
 
-These are not scores of intelligence.
-They are signals used for classification.
+---
 
-5) Derived Values (Interpretation Layer)
-Energy
+## 4. Verdict Types
 
-Energy is a weighted aggregation of raw signals:
+### creative_tension
 
-energy = weighted(tension, coherence, pressure_response [, confidence])
+* High tension
+* Sufficient coherence
+* Stable under pressure
+* Not self-protecting
 
+This is the **most valuable state**.
+Energy is accumulated for downstream evolution.
 
-It represents usable creative potential, not quality or correctness.
+---
 
-Energy can be high in both productive and unstable states.
+### bubble
 
-Verdict Classification
+* Moderate tension
+* Degrading coherence
+* Weak pressure response
 
-Each log is assigned exactly one verdict:
+The idea appears impressive but lacks depth.
+It is logged but **not fed forward**.
 
-Verdict	Meaning
-creative_tension	Contradiction remains coherent under pressure
-bubble	Apparent strength collapses when stressed
-collapse	Defensive or incoherent failure
+---
 
-The verdict is rule-based, not subjective.
+### collapse
 
-6) Action Field (System Response)
+* Low coherence or
+* Strong self-protection or
+* Failure under pressure
 
-The action field records what the system does next:
+Collapse does **not** mean “wrong”.
+It means structurally unsound in its current form.
 
-PRESERVE_AND_FEED
-Retain and allow further evolution.
+---
 
-ISOLATE_AND_TEST
-Quarantine for further stress testing.
+## 5. Energy
 
-DISCARD_OR_RESET
-Remove from active exploration.
+Energy is a **scalar summary** used only for comparison.
 
-Actions are logged to ensure non-retroactive justification.
+Example (conceptual):
 
-7) Reason Field (Human-Readable Justification)
+```
+energy =
+  0.4 * tension +
+  0.4 * coherence +
+  0.2 * pressure_response
+```
 
-The reason section explains why the verdict was assigned.
+Energy is **not intelligence**.
+It is a signal for *which ideas deserve more attention*.
 
-This is intentionally concise and grounded in metrics.
+---
 
-It exists for:
+## 6. Lineage Tags (Research Traceability)
 
-reviewers,
+Every log carries a `lineage_tag`.
 
-future audits,
+This allows:
 
-and self-critique.
+* A/B branching
+* experiment grouping
+* ablation tracking
+* recovery of discarded ideas
 
-8) What This Log Does Not Claim
+Resonetics logs function as **research notebooks**, not black-box telemetry.
 
-These logs do not claim:
+---
 
-intelligence,
+## 7. What Reviewers Should Look For
 
-understanding,
+Reviewers are encouraged to examine:
 
-intention,
+* consistency across similar inputs
+* stability under re-evaluation
+* absence of self-protective behavior
+* clarity of rejection reasons
 
-or autonomy.
+Single scores are meaningless in isolation.
+**Patterns matter.**
 
-They document behavior under constraints.
+---
 
-9) How Reviewers Should Use This Log
+## 8. What This Log Is Not
 
-Reviewers are encouraged to:
+* Not a training metric
+* Not a performance benchmark
+* Not a truth score
+* Not an AGI signal
 
-compare logs across ablations,
+It is a **structural diagnostic trace**.
 
-check verdict consistency under similar metrics,
+---
 
-and challenge classification thresholds.
+## Summary
 
-If a verdict appears questionable,
-that is a signal for further experiment, not an error to be hidden.
+Resonetics experiment logs document:
 
-10) Design Principle
+* how ideas behave
+* not what they claim
 
-If a result cannot survive logging,
-it cannot survive reality.
+Reading them correctly means focusing on:
+**structure, pressure, and evolution — not conclusions.**
+
