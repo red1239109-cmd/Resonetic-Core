@@ -96,3 +96,17 @@ centered on control, stability, and interpretability.
 ### One-Line Summary
 Resonetics does not maximize freedom.  
 It learns the boundaries that must not collapse.
+
+Non-AGI Clarification
+
+This system does not claim Artificial General Intelligence.
+All objectives, task boundaries, and evaluation criteria are externally defined.
+The system does not autonomously generate goals, expand its task domain,
+or perform open-ended self-directed learning.
+
+Observed adaptive behavior emerges from layered constraint mechanisms
+designed to preserve stability under non-stationary conditions,
+not from general problem-solving capability.
+
+Any appearance of “general intelligence” should be understood as
+robust control under uncertainty, not domain-independent cognition.
