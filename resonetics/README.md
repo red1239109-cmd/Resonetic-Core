@@ -1,61 +1,192 @@
-# Resonetics Auditor v6.3.1 (Survival Edition)
+# Resonetics
 
-![Version](https://img.shields.io/badge/version-6.3.1-blue) ![License](https://img.shields.io/badge/license-AGPL--3.0-red) ![Python](https://img.shields.io/badge/python-3.x-green)
+**Constraint-Grounded Reasoning Systems**
+*Stability emerges from measured tension, not from unconstrained freedom.*
 
-> **"Structural Resonance & Survival Instinct"**
->
-> A context-aware, robust, and cross-platform code analysis tool. Beyond simple linting, it statistically evaluates the "Survival Instinct" (Error Handling) and "Structural Resonance" (Ideal Length) of Python code.
+---
 
-## 📋 Overview
+## Overview
 
-This tool uses the `ast` module to parse Python source code and calculates a quality score based on four key metrics defined in the system:
+**Resonetics** is a research-oriented project exploring how **constraints, uncertainty, and internal tension** can be explicitly modeled inside AI systems—both numeric and linguistic—without collapsing into rigid rules or unconstrained generation.
 
-1.  **Structural Resonance:** Evaluates how harmonious function lengths are compared to the project's median, using a Gaussian distribution (Bell Curve).
-2.  **Survival Instinct:** Measures the code's ability to survive in hostile environments by analyzing error handling (`try-except` blocks).
-3.  **Complexity:** Calculates the 'cognitive weight' using McCabe Cyclomatic Complexity.
-4.  **Autopoiesis:** The system demonstrates self-sustainment by falling back to standard libraries if dependencies (Numpy) are missing and analyzing itself if no input is provided.
+This repository contains **multiple independent but philosophically aligned modules**, each operating at a different abstraction layer:
 
-## ✨ Key Features
+* Numeric optimization (PyTorch, differentiable systems)
+* Structural reasoning (model auditing, constraint diagnostics)
+* Linguistic refinement (recursive critique loops)
 
-* **Micro-Defense 1 (Windows Compatibility):** Forces UTF-8 encoding on Windows consoles to prevent crashes when rendering emojis.
-* **Micro-Defense 2 (Robust Dependency):** Automatically falls back to standard statistics logic if `numpy` is not installed.
-* **Micro-Defense 3 (AST Compatibility):** Detects Python versions (< 3.8 vs >= 3.8) to handle Docstring parsing logic dynamically.
-* **Statistical Precision (IQR Filtering):** Uses Interquartile Range (IQR) to filter out outliers when calculating the ideal function length.
-* **God Class Detection:** Applies penalties to classes that exceed the threshold for methods or attributes.
+> **Important:**
+> This is a *research prototype*, not a production-ready framework.
+> Claims are intentionally scoped, and limitations are explicitly documented.
 
-## 🛠 Installation & Requirements
+---
 
-This tool operates as a single independent script.
+## Core Modules
 
-### Prerequisites
-* Python 3.x
+### 1. Resonetics Alpha (Grandmaster Series)
 
-### Optional
-* `numpy` (Install for more precise statistical analysis using IQR)
-    ```bash
-    pip install numpy
-    ```
-    *※ The tool runs perfectly without Numpy.*
+**File:**
+`resonetics_alpha_grandmaster_v4_2_flow_structure_tension.py`
 
-## 🚀 Usage
+**Purpose:**
+A minimal but expressive simulation of **constraint-driven decision making**, where:
 
-Run the script via your terminal or command prompt.
+* **Reality** (target values),
+* **Structure** (preferred forms),
+* **Flow** (change / oscillation),
+* **Tension** (conflict between reality and structure)
 
-### 1. Analyze a Specific File
-Pass the target Python file path as an argument.
-```bash
-python resonetics_v6_auditor.py target_file.py
+are jointly optimized via a multi-layer loss system.
 
-## ⚖️ Limitations & Philosophy (Honest Disclosure)
+**Key Concepts**
 
-> "A tool without opinion is just a hammer. Resonetics Auditor has a soul."
+* Multi-objective loss with **learned uncertainty weighting**
+* Explicit modeling of **flow vs structure vs tension**
+* EMA teacher for temporal self-consistency
+* Designed for *analysis*, not benchmark performance
 
-**⚠️ Technical Trade-offs**
-* **Adaptive Dependency:** Uses `numpy` for advanced statistics (IQR) if available, but falls back to standard deviation for survival.
-* **Heuristic Weights:** The scoring ratio (Structure 40% / Resilience 20% / Maintainability 20%) is empirical, based on the **Resonetics Philosophy**.
-* **Lightweight Complexity:** Uses approximate Cyclomatic Complexity to keep the tool fast and portable (Single-file architecture).
+---
 
-**🎨 Core Concepts**
-* **Survival Instinct:** Measures how well the code handles chaos (`try-except` blocks).
-* **Structural Resonance:** Analyzes the harmony of function lengths relative to the project's median.
-* **Autopoiesis:** The tool itself is designed to run in any environment (Windows/Linux, Legacy Python) without breaking.
+### 2. Resonetic Transformer (Unit 02)
+
+**Files:**
+
+* `resonetics_transformer_v3_3_uncertainty.py`
+
+**Purpose:**
+A Transformer variant that injects **structural and philosophical constraints** directly into attention and auxiliary losses.
+
+**Key Features**
+
+* Resonance-biased attention (phase-distance penalty)
+* R-Grammar semantic projection (S/R/T/G)
+* Boundary layers as internal stability estimators
+* Auxiliary losses grounded in measurable internal signals
+
+---
+
+### 3. Paradox Refinement Engine (Linguistic Layer)
+
+**Files:**
+
+* `resonetics_v2_paradox.py`
+
+**Purpose:**
+A **language-side counterpart** to numeric constraint optimization.
+
+Instead of gradients, it uses a **recursive critique loop** to stabilize text generation via:
+
+* Structural constraints (Rule of Three)
+* Boundary detection (logic flips, paradox)
+* Confidence-weighted convergence
+
+> There is **no shared training loop** with numeric models.
+> The relationship is *conceptual*, not operational.
+
+---
+
+### 4. Resonetics Auditor
+
+**Files:**
+
+* `resonetics_auditor_v6_5_hardened.py`
+
+**Purpose:**
+A structural analysis tool that evaluates Python code through:
+
+* Function length distributions
+* Cyclomatic complexity
+* Error-handling resilience
+* Async feature usage
+
+Designed to **diagnose structural risk**, not enforce style.
+
+---
+
+## Experiments & Benchmarks
+
+### EtherVAE Benchmarks
+
+**Files:**
+
+* `ethervae_benchmark_v5_baselines.py`
+* `ethervae_benchmark_v6_logging.py`
+
+**What is evaluated**
+
+* Standard VAE vs Ether-modulated inference
+* Entropy-sensitive behavior
+* Local smoothness & manifold quality
+* Statistical significance (paired tests)
+
+**Outputs**
+
+* Reproducible experiment logs
+* Visual comparisons
+* Quantitative summaries
+
+---
+
+## Documentation
+
+* `THEORY.md`
+  Formal motivation and theoretical framing
+* `PHILOSOPHY.md`
+  Design principles and conceptual grounding
+* `KNOWN_ISSUES.md`
+  Explicit limitations and known weaknesses
+* `EXPERIMENT_LOG_EXAMPLE.md`
+  How to read experiment outputs (reviewer guide)
+* `RELATION_TO_PARADOX_ENGINE.md`
+  Conceptual relationship between numeric and linguistic systems
+
+---
+
+## Known Limitations (Short Version)
+
+* Not benchmarked against large-scale SOTA models
+* Many hyperparameters are **exploratory**
+* Attention mechanisms remain O(L²)
+* Claims are **local and scoped**, not AGI-level
+
+See `KNOWN_ISSUES.md` for full details.
+
+---
+
+## License
+
+### Dual License Model
+
+**1. Open Source (AGPL-3.0)**
+
+* Free for research, education, and open projects
+* Derivative works must also be open-sourced under AGPL-3.0
+
+**2. Commercial License**
+
+* For proprietary or closed-source use
+* Contact: **[red1239109@gmail.com](mailto:red1239109@gmail.com)**
+
+---
+
+## Author
+
+**Developer:** red1239109-cmd
+**Project:** Resonetics
+**Focus:** Constraint-based reasoning, uncertainty modeling, stability under tension
+
+---
+
+### Final Note
+
+This repository is **not about maximizing output**.
+
+It asks a different question:
+
+> *What must remain stable while change occurs?*
+
+If that question resonates, you’re reading the code correctly.
+
+---
+
+
