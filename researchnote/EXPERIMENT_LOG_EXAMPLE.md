@@ -1,10 +1,3 @@
-좋아요. 이건 **리뷰어·심사자·외부 연구자**가 로그를 처음 봤을 때
-“아, 이렇게 읽는 거구나” 하고 바로 이해하도록 만든 **1페이지 가이드**입니다.
-과장 없이, 하지만 수준은 높게 갑니다.
-
----
-
-````md
 # EXPERIMENT_LOG_EXAMPLE
 
 This document explains **how to read Resonetics experiment logs**.
