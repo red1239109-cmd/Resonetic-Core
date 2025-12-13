@@ -1,50 +1,60 @@
-# EtherVAE v3.1: Resonetics Benchmark
+# Resonetics
 
-![Version](https://img.shields.io/badge/version-3.1-blue) ![PyTorch](https://img.shields.io/badge/PyTorch-Deep_Learning-red) ![License](https://img.shields.io/badge/license-AGPL--3.0-green)
+**Resonetics** is a research framework exploring *constraint-driven generative systems*.
+Rather than maximizing free-form creativity, it investigates how **measured constraints**
+produce stability, structure, and meaningful variation in learning systems.
 
-> **"What if the latent space wasn't a vacuum, but a medium filled with ether waves?"**
+This repository contains experimental architectures and benchmarks that study
+how *resonance*, *entropy regulation*, and *structural tension* affect learning dynamics.
 
-**EtherVAE** is a scientific experiment that reimagines the Variational Autoencoder (VAE) by introducing **structured interference patterns (Ether Waves)** into the latent space. It implements the core philosophy of **Resonetics**: managing entropy through adaptive resonance.
+---
 
-## 🔬 Experiment Modes
+## Core Idea
 
-This benchmark compares three distinct generative modes:
+Most generative models ask:
 
-1.  **Standard Mode:** The classical VAE approach using pure Gaussian noise. Safe but often blurry or generic.
-2.  **Ether Mode:** Introduces a constant sinusoidal wave (`sin(z)`) into the latent vector. Adds high diversity but creates instability.
-3.  **Resonetics Mode (The Hypothesis):** An entropy-aware mechanism.
-    * **High Entropy (Chaos):** Suppresses waves to maintain stability.
-    * **Low Entropy (Order):** Amplifies waves to encourage creativity.
+> “How much variation can we allow?”
 
-## 🧪 Key Features
+Resonetics asks instead:
 
-* **Decoupled Training/Inference:** Maintains mathematical rigor by training as a standard VAE and applying Ether effects only during inference.
-* **Entropy Control Logic:** Automatically detects the "temperature" (std dev) of the latent space and adjusts wave amplitude.
-* **Smoothness Metric:** Quantitatively measures the stability of the latent manifold under perturbations.
+> **“What must remain invariant while change occurs?”**
 
-## 🛠️ Installation
+This shift reframes creativity as a *controlled phenomenon*, not noise.
 
-1.  Clone the repository:
-    ```bash
-    git clone [https://github.com/red1239109-cmd/Resonetic-Cores.git](https://github.com/red1239109-cmd/Resonetic-Cores.git)
-    cd Resonetic-Cores
-    ```
+---
 
-2.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+## Repository Structure
 
-## 🚀 Usage
+- **EtherVAE**  
+  Latent-space experiments exploring entropy-aware modulation and resonance effects.
 
-Run the scientific benchmark script:
+- **Resonetics Transformer**  
+  A transformer variant with resonance-biased attention, boundary layers, and
+  uncertainty-weighted auxiliary losses.
 
-```bash
-python ethervae_benchmark_v3_1.py
+- **Benchmarks & Logs**  
+  Scientific benchmarks designed for reproducibility, ablation, and reviewer inspection.
 
-Expected Output
-The script will generate a visualization comparing the three modes. Look for:
+---
 
-Ether Mode: High visual variance, potentially "wavy" artifacts.
+## Design Principles
 
-Resonetics Mode: Sharp images with controlled diversity (Low Smoothness Score = Better Stability).
+- Constraint ≠ Restriction  
+- Instability is measured, not forbidden  
+- Structure and variation are treated as a *tension*, not a tradeoff  
+- Claims are bounded by experiments, not metaphors  
+
+---
+
+## Status
+
+This project is **experimental research code**.
+It is not production-ready and does not claim superiority over standard architectures
+outside the demonstrated benchmarks.
+
+---
+
+## License
+
+AGPL-3.0 (see LICENSE)  
+Commercial licensing available upon request.
