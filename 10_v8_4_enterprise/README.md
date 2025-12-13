@@ -1,88 +1,98 @@
-# Resonetics v8.4: The Prophet (Enterprise Edition)
+# Resonetics  
+Constraint-Grounded Learning Systems for Stable Adaptation
 
-![Version](https://img.shields.io/badge/version-8.4-blue) ![Python](https://img.shields.io/badge/python-3.9%2B-green) ![PyTorch](https://img.shields.io/badge/pytorch-2.0%2B-orange) ![License](https://img.shields.io/badge/license-AGPL--3.0-red)
+Resonetics is a project dedicated to researching and implementing learning systems centered on constraints.  
+It begins not with the question **“What should we maximize?”**,  
+but with **“What must remain invariant while change occurs?”**.
 
-> **"A self-healing AI system that predicts its own instability and adapts in real-time."**
+### Core Ideas
+All Resonetics systems share three fundamental principles:
 
-**Resonetics v8.4** is a production-ready implementation of a **Metacognitive Auto-Tuning System**. Unlike traditional schedulers that react to past errors, The Prophet uses a secondary neural network to **predict future instability** and adjusts hyperparameters *before* failure occurs.
+1. **Constraints are not to be eliminated — they are to be measured.**  
+2. **Instability is not suppressed — it is predicted.**  
+3. **Autonomy becomes safe only through meta-regulation.**
 
-Designed for **MLOps environments**, it comes with built-in Prometheus metrics, Health checks for Kubernetes, and YAML-based configuration.
+These principles are realized in different forms across numerical models (tensors), language systems (text), and operational systems (enterprise control).
 
----
+### Project Structure
 
-## 🌟 Key Features
+1. **Resonetics Prophet (Enterprise System)**  
+   Example file: `resonetics_prophet_v8_4_1_enterprise_clean.py`
 
-### 1. 🔮 Predictive Auto-Tuning
-- **Concept:** Uses a `RiskPredictor` network to forecast loss magnitude.
-- **Mechanism:** - **High Risk:** Triggers "Panic Mode" (Boost Learning Rate 5x) to adapt to Concept Drift.
-    - **Low Risk:** Engages "Cruise Mode" (Low Learning Rate) for fine-tuning.
-- **Safety:** Gradient isolation ensures no information leakage between the worker and the predictor.
+   Role  
+   - Trains a worker model in dynamic environments  
+   - Uses a meta-model (Risk Predictor) to forecast instability (risk)  
+   - Automatically adjusts learning rate and mode (PANIC / ALERT / CRUISE) based on predicted risk  
 
-### 2. 🛡️ Enterprise Ready
-- **Observability:** Real-time metrics export via **Prometheus** (`:8000`).
-- **Resilience:** Liveness & Readiness probes for **Kubernetes** (`:8080`).
-- **Configurable:** Fully externalized configuration via `config.yaml` and Environment Variables.
+   Key Features  
+   - Risk-aware learning rate tuning  
+   - Concept drift simulation  
+   - Prometheus & health-check based operational monitoring  
+   - Graceful shutdown & checkpointing  
 
-### 3. 📉 Handling Concept Drift
-- Designed to survive dynamic environments where data distribution shifts abruptly (e.g., Sine Wave → Square Wave → Chaos).
+   This system is not a “performance optimizer” —  
+   it is a **regulator that sustains learning while avoiding collapse**.
 
----
+2. **Resonetics Auditor (Code Analysis Tool)**  
+   Example file: `resonetics_auditor_v6_5_hardened.py`
 
-## 🏗️ Architecture
+   Role  
+   - Structural stability analysis of Python code  
+   - Evaluates function length, complexity, resilience, and async usage  
 
-```mermaid
-graph LR
-    Input[Input Stream] --> Worker[Worker Agent]
-    Input --> Predictor[Risk Predictor]
-    
-    Predictor -- "1. Predict Risk" --> Tuner[Prophet Optimizer]
-    Tuner -- "2. Adjust LR" --> Optimizer
-    Optimizer -- "3. Update Weights" --> Worker
-    
-    Worker -- "4. Compute Loss" --> Loss
-    Loss -- "5. Train Predictor" --> Predictor
+   Output  
+   - Quantitative overall score  
+   - Detailed per-function / per-class reports  
+   - Complexity penalty and resilience metrics  
 
-    🚀 Quick Start
-Prerequisites
-Python 3.9+
+   The Auditor is not a “style checker” —  
+   it is a **detector of potential structural collapse**.
 
-PyTorch 2.0+
+3. **EtherVAE Benchmarks (Scientific Evaluation)**  
+   Example file: `ethervae_benchmark_v6_logging.py`
 
-1. Installation
-Bash
+   Role  
+   - Rigorous evaluation of VAE variants (Ether / Resonetics modes)  
+   - Analysis of manifold stability under varying entropy  
+   - Measurement of local smoothness and global manifold quality  
 
-git clone [https://github.com/red1239109-cmd/Resonetics-Prophet.git](https://github.com/red1239109-cmd/Resonetics-Prophet.git)
-cd Resonetics-Prophet
-pip install -r requirements.txt
+   Included Elements  
+   - Statistical testing (t-test, effect size)  
+   - Visualization-based comparison  
+   - Reproducible experiment logging  
 
-🐳 Docker Support
-Build and run as a microservice container.
+### Documentation Structure
 
-# Build
-docker build -t resonetics-prophet:v8.4 .
+| File              | Purpose                                      |
+|-------------------|----------------------------------------------|
+| README.md         | Overall project overview                     |
+| THEORY.md         | Design theory of numerical systems           |
+| PHILOSOPHY.md     | Philosophical background on constraints and instability |
+| KNOWN_ISSUES.md   | Known limitations and risks                  |
+| EXPERIMENT_LOG_EXAMPLE.md | Guide to reading experiment logs             |
 
-# Run (Exposing metrics & health ports)
-docker run -p 8000:8000 -p 8080:8080 resonetics-prophet:v8.4
+### License
+**Dual License Model**
 
-📊 Observability (Monitoring)
-The system exposes metrics for Grafana/Prometheus.
-Port,Endpoint,Description,Usage
-8000,/metrics,Prometheus Metrics,"Track LR, Risk, Error"
-8080,/healthz,Health Check,Kubernetes Liveness Probe
-8080,/readyz,Readiness Check,Kubernetes Readiness Probe
+**Open Source**  
+- AGPL-3.0  
+- Source code must be disclosed when used over a network
 
-Exposed Metrics
-prophet_learning_rate: The dynamic learning rate adjusted by the AI.
+**Commercial License**  
+- Available for proprietary use  
+- Terms negotiated based on organization size and usage scope
 
-prophet_predicted_risk: The instability score (0.0 - 1.0) predicted by the meta-network.
+📧 Contact: red1239109@gmail.com
 
-prophet_actual_error: The real-time squared error of the worker task.
+### What Resonetics Is Not
 
-🧪 Simulation Scenario
-When you run the simulation, the environment will shift through three phases to test the AI's adaptability:
+- A claim of universal AGI ❌  
+- A black-box “self-aware” model ❌  
+- A benchmark-chasing performance competition ❌
 
-Phase 1 (0-500): Normal Sine Wave (Easy)
+Resonetics is an experimental learning framework  
+centered on control, stability, and interpretability.
 
-Phase 2 (500-1000): Square Wave (Concept Drift!) -> Expect LR Spike
-
-Phase 3 (1000+): Chaotic Function (Hard) -> Expect High Volatility
+### One-Line Summary
+Resonetics does not maximize freedom.  
+It learns the boundaries that must not collapse.
