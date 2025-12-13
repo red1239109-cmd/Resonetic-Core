@@ -1,84 +1,196 @@
-Resonetics
-Engineering Tension, Not Intelligence
+# Resonetics
 
-Resonetics is not AGI.
-It is a research system for detecting, classifying, and evolving contradictions.
+**Engineering Tension, Not Intelligence**
 
-Most AI systems optimize for convergence.
-Resonetics measures what should not converge.
+Resonetics is **not an AGI** and does not attempt to simulate human intelligence.
 
-What Resonetics Does
+Instead, it explores how **tension, contradiction, and uncertainty** can be
+**measured, classified, and transformed into creative energy**
+inside computational systems.
 
-Resonetics evaluates ideas, claims, or internal states by measuring:
+This repository contains **three evolutionary versions of a single idea**,
+developed sequentially as understanding deepened.
 
-Tension — how strong the contradiction is
+---
 
-Coherence — whether it is structurally meaningful
+## Core Idea
 
-Pressure Response — how it behaves under scrutiny
+Most AI systems optimize for:
 
-Self-Protection — whether it defends itself instead of evolving
+- accuracy  
+- convergence  
+- stability  
 
-From this, each paradox is classified as:
+Resonetics asks a different question:
 
-Type	Meaning	Action
-Creative Tension	Productive contradiction	PRESERVE_AND_FEED
-Bubble	Inflated but hollow claim	IGNORE
-Collapse	Inconsistent or defensive logic	FORCE_COLLAPSE
+> **What if sustained tension — not resolution — is the source of creativity?**
 
-This is rule-based, auditable, and reproducible — not opinion.
+Instead of forcing contradictions to collapse, Resonetics:
 
-What This Is NOT
+- detects paradox  
+- measures its structural properties  
+- decides whether it should be **fed, ignored, or collapsed**
 
-❌ Not AGI
+The system does not seek answers.  
+It evaluates **which contradictions deserve to survive**.
 
-❌ Not consciousness
+---
 
-❌ Not a chatbot
+## Repository Structure (Three Versions)
 
-❌ Not “AI that thinks”
+### 1. Prophet — Enterprise Runtime
 
-Resonetics does not generate intelligence.
-It filters which contradictions deserve to evolve.
+**File:**  
+`resonetics_prophet_v8_4_1_enterprise_clean.py`
 
-Why This Matters
+A production-grade experimental system featuring:
 
-Breakthrough ideas are not born from certainty.
-They survive because their contradictions are stable under pressure.
+- risk prediction  
+- adaptive learning-rate modulation  
+- monitoring (Prometheus / health checks)  
+- resilience under concept drift  
 
-Resonetics treats contradiction as:
+**Purpose**
 
-a measurable object
+Demonstrate **system-level metacognition**, not creativity itself.
 
-a source of creative energy
+This version answers:
 
-a selection problem, not a flaw
+> *“How can a system protect itself while learning?”*
 
-Repository Structure (Overview)
+---
 
-Prophet — runtime system with risk-aware self-regulation
+### 2. Auditor — Structural Analyzer
 
-Auditor — structural analyzer for code and systems
+**File:**  
+`resonetics_auditor_v6_5_hardened.py`
 
-Via Negativa — creative core based on subtraction, not addition
+A static analysis tool that:
 
-Each version represents a discarded illusion, not a feature upgrade.
+- inspects Python source code via AST  
+- scores structure, complexity, resilience, async usage  
+- highlights architectural tension and risk  
 
-Philosophy
+**Purpose**
 
-Perfection is achieved not when there is nothing more to add,
-but when there is nothing left to remove.
-— Antoine de Saint-Exupéry
+Evaluate code as a **living structure**, not style compliance.
 
-Resonetics follows Via Negativa:
-intelligence is not built — it is uncovered by removal.
+This version answers:
 
-License
+> *“Is this system structurally honest?”*
 
-AGPL-3.0
-(Commercial licensing available — see file headers)
+---
 
-Final Line (Important)
+### 3. Via Negativa — Creative Core
 
-If something feels “creative”, it is because it survived contradiction —
-not because it was optimized for correctness.
+**File:**  
+`resonetics_via_negativa_v1_1_runtime_fixed.py`
+
+The conceptual heart of the project.
+
+Implements **subtractive cognition**:
+
+- unlearning compulsion  
+- paradox acceptance  
+- humility derived from uncertainty  
+- integration instead of fragmentation  
+
+Includes:
+
+- paradox classification  
+  (`creative_tension / bubble / collapse`)  
+- energy computation  
+- action verdicts  
+  (`PRESERVE_AND_FEED / IGNORE / FORCE_COLLAPSE`)  
+
+**Purpose**
+
+Explore **idea evolution**, not task performance.
+
+This version answers:
+
+> *“Which contradictions deserve to live?”*
+
+---
+
+## Paradox Classification Logic
+
+Each paradox is evaluated across four dimensions:
+
+- **tension** — contradiction intensity  
+- **coherence** — internal structural consistency  
+- **pressure_response** — behavior under stress  
+- **self_protecting** — evasive or defensive behavior  
+
+Resulting in a deterministic verdict:
+
+| Type              | Meaning                                              | Action              |
+|-------------------|------------------------------------------------------|---------------------|
+| creative_tension  | Stable contradiction generating insight               | PRESERVE_AND_FEED   |
+| bubble             | Inflated claim without structural support            | IGNORE              |
+| collapse           | Incoherent or self-protective paradox                | FORCE_COLLAPSE      |
+
+This process is **rule-based, auditable, and reproducible**.  
+It is not opinion-driven.
+
+---
+
+## What This Is NOT
+
+- ❌ Not AGI  
+- ❌ Not consciousness simulation  
+- ❌ Not a chatbot  
+- ❌ Not claiming intelligence emergence  
+
+Resonetics does **not think**.
+
+It filters **which thoughts are worth evolving**.
+
+---
+
+## Why Three Versions?
+
+Because understanding evolved.
+
+Each version represents:
+
+- a discarded assumption  
+- a removed illusion  
+- a cleaner abstraction  
+
+This is **intentional lineage**, not indecision.
+
+---
+
+## Philosophy
+
+Resonetics follows **Via Negativa**:
+
+> “Perfection is achieved, not when there is nothing more to add,  
+> but when there is nothing left to take away.”  
+> — *Antoine de Saint-Exupéry*
+
+Instead of asking:
+
+> *“What should AI become?”*
+
+Resonetics asks:
+
+> *“What should be removed?”*
+
+---
+
+## License
+
+AGPL-3.0  
+Dual-license possible for commercial use.  
+See headers in individual files for details.
+
+---
+
+## Final Note
+
+If an AI system ever appears creative,  
+it is not because it knows more —  
+
+but because it knows **what not to resolve**.
