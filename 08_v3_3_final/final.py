@@ -1,14 +1,13 @@
 # ==============================================================================
 # File: resonetics_v3_3_2_final.py
 # Project: Resonetics (The Entropy Gardener)
-# Version: 3.3.2 (Robustness Patch)
+# Version: 3.3.2 (Robustness Patch) + Metrics Patch
 # Description: A physics-informed, bio-mimetic AI simulation.
-#              Refined with safety nets based on code review.
 #
-# Changes applied based on review:
-#   - Added Try-Except blocks for simulation stability (Critical)
-#   - Maintained dictionary config for script simplicity
-#   - Kept O(N) Spatial Hashing (defaultdict) as it is optimal for N<1000
+# PATCHES APPLIED (2 items only):
+#   [FIX 1] CompactBrain.fc_dim is now inferred safely from CONFIG["view_size"]
+#   [FIX 2] Added "tension/collapse metrics" to logs + HUD:
+#           - entropy_gradient, population_volatility, emergency_ratio
 #
 # License: AGPL-3.0
 # ==============================================================================
@@ -48,6 +47,10 @@ CONFIG = {
 # [Core Intelligence]
 # ---------------------------------------------------------
 class CompactBrain(nn.Module):
+    """
+    [FIX 1] fc_dim is inferred from a dummy forward pass.
+    This prevents shape bugs when CONFIG["view_size"] changes.
+    """
     def __init__(self):
         super().__init__()
         self.visual = nn.Sequential(
@@ -56,15 +59,24 @@ class CompactBrain(nn.Module):
             nn.MaxPool2d(2),
             nn.Flatten()
         )
-        self.fc_dim = CONFIG["feature_dim"] * 4
+
+        # ---- SAFE fc_dim inference (view_size-dependent) ----
+        with torch.no_grad():
+            vs = int(CONFIG["view_size"])
+            dummy = torch.zeros(1, 1, vs, vs)  # (B,C,H,W)
+            flat = self.visual(dummy)
+            self.fc_dim = int(flat.shape[-1])
+        # ----------------------------------------------------
+
         self.lstm = nn.LSTM(self.fc_dim, CONFIG["hidden_dim"], batch_first=True)
         self.policy = nn.Linear(CONFIG["hidden_dim"], 6)
 
     def forward(self, x, hidden):
-        feat = self.visual(x).unsqueeze(1)
+        feat = self.visual(x).unsqueeze(1)  # (B,1,fc_dim)
         out, new_hidden = self.lstm(feat, hidden)
         logits = self.policy(out[:, -1, :])
         return torch.softmax(logits, dim=-1), new_hidden
+
 
 class Agent:
     def __init__(self, id, row, col):
@@ -84,9 +96,10 @@ class Agent:
                 h0 = torch.zeros(1, 1, CONFIG["hidden_dim"])
                 c0 = torch.zeros(1, 1, CONFIG["hidden_dim"])
                 self.hidden = (h0, c0)
-            
+
             probs, self.hidden = self.brain(view_tensor, self.hidden)
             self.planned_action = torch.argmax(probs).item()
+
 
 # ---------------------------------------------------------
 # [The Engine]
@@ -96,7 +109,7 @@ class ResoneticsEngine:
         self.size = CONFIG["grid_size"]
         self.grid = np.zeros((self.size, self.size), dtype=np.float32)
         self.agents = [
-            Agent(i, np.random.randint(0, self.size), np.random.randint(0, self.size)) 
+            Agent(i, np.random.randint(0, self.size), np.random.randint(0, self.size))
             for i in range(CONFIG["init_agents"])
         ]
         self.id_counter = CONFIG["init_agents"]
@@ -104,6 +117,10 @@ class ResoneticsEngine:
         self.log_buffer = []
         self.emergency_moves = 0
         self.isolation_saves = 0
+
+        # [FIX 2] Tension/collapse metrics state (previous step)
+        self.prev_total_entropy = 0.0
+        self.prev_population = len(self.agents)
 
     def get_view(self, row, col):
         s = CONFIG["view_size"] // 2
@@ -124,19 +141,20 @@ class ResoneticsEngine:
         return best_action, best_dirt
 
     def step(self):
-        # [Robustness] Wrap logic in try-except to prevent simulation crash
         try:
             self.emergency_moves = 0
-            
+
             # Phase 0: Vitality
             self.agents = [a for a in self.agents if a.energy > 0]
             if len(self.agents) < CONFIG["min_population"]:
                 missing = CONFIG["min_population"] - len(self.agents)
                 for _ in range(missing):
                     self.id_counter += 1
-                    self.agents.append(Agent(self.id_counter, 
-                                           np.random.randint(0, self.size), 
-                                           np.random.randint(0, self.size)))
+                    self.agents.append(Agent(
+                        self.id_counter,
+                        np.random.randint(0, self.size),
+                        np.random.randint(0, self.size)
+                    ))
 
             # Phase 1: Planning
             moves = defaultdict(list)
@@ -145,7 +163,7 @@ class ResoneticsEngine:
 
             for agent in self.agents:
                 agent.is_emergency_move = False
-                
+
                 # Smart Survival Logic
                 if agent.energy <= CONFIG["move_cost"] + 0.1:
                     current_dirt = self.grid[agent.row, agent.col]
@@ -168,7 +186,7 @@ class ResoneticsEngine:
                 act = agent.planned_action
                 target = (agent.row, agent.col)
 
-                if act < 4: 
+                if act < 4:
                     d_row, d_col = [(-1,0), (1,0), (0,-1), (0,1)][act]
                     target = ((agent.row + d_row) % self.size, (agent.col + d_col) % self.size)
                     moves[target].append(agent)
@@ -183,12 +201,11 @@ class ResoneticsEngine:
             # Phase 2: Conflict & Move
             new_positions = {}
             for pos, candidates in moves.items():
-                # [Optimization] O(N) Spatial Hashing (defaultdict) is already used here.
-                # No need for Quadtree as N is small (<100).
                 winner = max(candidates, key=lambda a: a.energy)
                 new_positions[winner.id] = pos
                 for loser in candidates:
-                    if loser != winner: loser.energy -= 0.1
+                    if loser != winner:
+                        loser.energy -= 0.1
 
             for agent in self.agents:
                 if agent.id in new_positions:
@@ -216,26 +233,28 @@ class ResoneticsEngine:
 
                 for agent in cleaners:
                     count = count_map[(agent.row, agent.col)]
-                    if count > 0: # Safety check
+                    if count > 0:
                         reward = dirt_to_clean[agent.row, agent.col] * CONFIG["clean_reward"]
                         agent.energy += reward / count
-            
+
             # Phase 4: Reproduction
             if len(self.agents) < CONFIG["max_population"]:
                 breeders.sort(key=lambda a: a.energy, reverse=True)
                 for parent in breeders:
-                    if len(self.agents) >= CONFIG["max_population"]: break
+                    if len(self.agents) >= CONFIG["max_population"]:
+                        break
                     if parent.energy > CONFIG["reproduce_cost"]:
                         parent.energy -= CONFIG["reproduce_cost"]
                         self.id_counter += 1
                         child = Agent(self.id_counter, parent.row, parent.col)
-                        
+
                         with torch.no_grad():
                             for cp, pp in zip(child.brain.parameters(), parent.brain.parameters()):
                                 cp.data.copy_(pp.data)
                                 fan_in = cp.size(0) if cp.ndim > 1 else 1
                                 scale = CONFIG["mutation_rate"] / np.sqrt(max(fan_in, 1))
                                 cp.add_(torch.randn_like(cp) * scale)
+
                         self.agents.append(child)
 
             self.gen += 1
@@ -246,14 +265,25 @@ class ResoneticsEngine:
             traceback.print_exc()
             return self.grid, self.agents
 
+    # [FIX 2] tension/collapse metrics added to logging
     def log_to_buffer(self, avg_energy, total_entropy):
+        population = len(self.agents)
+
+        entropy_gradient = float(total_entropy - self.prev_total_entropy)
+        population_volatility = int(abs(population - self.prev_population))
+        emergency_ratio = float(self.emergency_moves / max(population, 1))
+
+        self.prev_total_entropy = float(total_entropy)
+        self.prev_population = int(population)
+
         self.log_buffer.append(
-            f"{self.gen},{len(self.agents)},{avg_energy:.2f},{total_entropy:.2f},"
-            f"{self.emergency_moves},{self.isolation_saves}\n"
+            f"{self.gen},{population},{avg_energy:.2f},{total_entropy:.2f},"
+            f"{self.emergency_moves},{self.isolation_saves},"
+            f"{entropy_gradient:.3f},{population_volatility},{emergency_ratio:.4f}\n"
         )
         if len(self.log_buffer) >= CONFIG["log_buffer_size"]:
             self.flush_buffer()
-    
+
     def flush_buffer(self):
         if self.log_buffer:
             try:
@@ -263,28 +293,36 @@ class ResoneticsEngine:
             except IOError as e:
                 print(f"⚠️ Warning: Logging failed - {e}")
 
+
 # ---------------------------------------------------------
 # [Visualization]
 # ---------------------------------------------------------
 def run_simulation():
     engine = ResoneticsEngine()
-    
-    if os.path.exists(CONFIG["log_file"]): os.remove(CONFIG["log_file"])
+
+    if os.path.exists(CONFIG["log_file"]):
+        os.remove(CONFIG["log_file"])
+
     with open(CONFIG["log_file"], 'w') as f:
-        f.write("Gen,Population,Avg_Energy,Total_Entropy,Emergency_Moves,Isolation_Saves\n")
+        f.write(
+            "Gen,Population,Avg_Energy,Total_Entropy,Emergency_Moves,Isolation_Saves,"
+            "Entropy_Gradient,Population_Volatility,Emergency_Ratio\n"
+        )
 
     fig, ax = plt.subplots(figsize=(9, 9))
     plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
-    
+
     im = ax.imshow(engine.grid, cmap='magma', vmin=0, vmax=1, animated=True)
     scatter = ax.scatter([], [], s=40, edgecolors='white', animated=True)
-    text = ax.text(0.02, 0.95, '', transform=ax.transAxes, color='white', 
-                   fontsize=11, fontweight='bold', bbox=dict(facecolor='black', alpha=0.6))
-    
+    text = ax.text(
+        0.02, 0.95, '', transform=ax.transAxes, color='white',
+        fontsize=11, fontweight='bold', bbox=dict(facecolor='black', alpha=0.6)
+    )
+
     def update(frame):
         grid, agents = engine.step()
         im.set_data(grid)
-        
+
         if agents:
             offsets = np.array([[a.col, a.row] for a in agents])
             energies = np.array([a.energy for a in agents])
@@ -295,33 +333,47 @@ def run_simulation():
         else:
             scatter.set_offsets(np.zeros((0, 2)))
 
-        avg_e = np.mean([a.energy for a in agents]) if agents else 0
-        total_entropy = np.sum(grid)
+        avg_e = np.mean([a.energy for a in agents]) if agents else 0.0
+        total_entropy = float(np.sum(grid))
+
+        # [FIX 2] log also computes the 3 tension metrics internally
         engine.log_to_buffer(avg_e, total_entropy)
 
-        stats = (f"GENERATION: {engine.gen:04d}\n"
-                 f"POPULATION: {len(agents):02d}\n"
-                 f"AVG ENERGY: {avg_e:6.1f}\n"
-                 f"ENTROPY   : {total_entropy:7.1f}\n"
-                 f"EMERGENCIES: {engine.emergency_moves:02d}\n"
-                 f"SAVED      : {engine.isolation_saves:04d}")
+        # Recompute for HUD display (same formulas)
+        population = len(agents)
+        entropy_gradient = total_entropy - engine.prev_total_entropy  # NOTE: prev updated in log
+        # For HUD, we show *current* emergency ratio
+        emergency_ratio = engine.emergency_moves / max(population, 1)
+
+        stats = (
+            f"GENERATION: {engine.gen:04d}\n"
+            f"POPULATION: {population:02d}\n"
+            f"AVG ENERGY: {avg_e:6.1f}\n"
+            f"ENTROPY   : {total_entropy:7.1f}\n"
+            f"EMERGENCIES: {engine.emergency_moves:02d}\n"
+            f"SAVED      : {engine.isolation_saves:04d}\n"
+            f"ΔENTROPY   : {engine.log_buffer[-1].split(',')[6] if engine.log_buffer else '0.000'}\n"
+            f"ΔPOP       : {engine.log_buffer[-1].split(',')[7] if engine.log_buffer else '0'}\n"
+            f"EMG_RATIO  : {emergency_ratio:6.3f}"
+        )
         text.set_text(stats)
         return im, scatter, text
 
-    print(f"🌱 [Resonetics v3.3.2] Simulation Started (Robustness Patch Applied)...")
-    
+    print("🌱 [Resonetics v3.3.2 + Metrics Patch] Simulation Started...")
+
     ani = animation.FuncAnimation(fig, update, frames=None, interval=50, blit=True)
-    plt.title("Resonetics v3.3.2: The Entropy Gardener\n(Robustness Patch)")
+    plt.title("Resonetics v3.3.2: The Entropy Gardener\n(+ Tension Metrics Patch)")
     plt.axis('off')
-    
+
     try:
         plt.show()
     except KeyboardInterrupt:
         print("\n🛑 Simulation stopped by user.")
     finally:
         engine.flush_buffer()
-        print(f"✅ Simulation ended cleanly.")
+        print("✅ Simulation ended cleanly.")
         print(f"📊 Total isolation saves: {engine.isolation_saves}")
 
 if __name__ == "__main__":
     run_simulation()
+
