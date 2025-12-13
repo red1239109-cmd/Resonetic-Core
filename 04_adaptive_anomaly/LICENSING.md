@@ -1,21 +1,45 @@
-⚖️ License & Pricing
-This project follows a Dual-License model.
+Dual Licensing Notice (AGPL-3.0 + Commercial)
 
-1. Open Source (AGPL-3.0)
-Best for: Students, Researchers, Open Source Projects.
+This project is offered under a **dual-license** model:
 
-Condition: If you use this code, you must open-source your entire project under AGPL-3.0.
+1) **Open Source License (AGPL-3.0)**
+2) **Commercial License**
 
-Cost: Free.
+The intent is simple:
+- If you can comply with AGPL-3.0, you may use the project under AGPL-3.0 at no cost.
+- If you need to keep your source code proprietary, you must obtain a commercial license from the author.
 
-2. Commercial License
-Best for: Startups, Proprietary SaaS, Internal Enterprise Tools.
+---
 
-Benefits: Keep your source code private (Closed Source) & Legal assurance.
+## 1) Open Source (AGPL-3.0)
 
-Cost: Paid license required. (Contact author)
+**Best for:** students, researchers, open-source projects, and anyone able to comply with AGPL-3.0.
 
-👤 Author
-Developer: red1239109-cmd
+**Key condition:** If you use, modify, or deploy this project in a way that triggers AGPL-3.0 obligations (including network use), you must comply with the AGPL-3.0 terms, including providing the corresponding source code for the covered work and your modifications as required by the license.
 
-Contact: red1239109@gmail.com
+**Cost:** Free.
+
+> The authoritative terms are in the `LICENSE` file (AGPL-3.0 full text).  
+> If you are unsure whether your use case triggers AGPL obligations, consult your legal counsel.
+
+---
+
+## 2) Commercial License
+
+**Best for:** startups, proprietary SaaS products, internal enterprise tools, and any use case where you do **not** want to disclose source code under AGPL-3.0.
+
+**Benefits:**
+- Keep your source code private (closed source)
+- Written commercial terms and legal assurance for your specific use case
+
+**Cost:** Paid license required (pricing depends on use case).
+
+To request a commercial license, contact the author.
+
+---
+
+## Author / Contact
+
+**Developer:** red1239109-cmd  
+**Email:** red1239109@gmail.com
+
