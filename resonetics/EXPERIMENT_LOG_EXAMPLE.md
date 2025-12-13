@@ -1,30 +1,30 @@
-# EXPERIMENT_LOG_EXAMPLE
+# Experiment Log – How to Read and Reproduce Results
 
-This document explains **how to read Resonetics experiment logs**.
-It is intended for reviewers, auditors, and collaborators.
+This document explains how to read experiment logs produced by the Resonetics
+systems and how to interpret their meaning correctly.
 
-Resonetics logs are **not training logs**.
-They are **conceptual behavior traces**.
-
----
-
-## 1. What an Experiment Log Represents
-
-Each log entry corresponds to a **single evaluated conceptual state**.
-
-A state may be:
-- a hypothesis
-- a claim
-- a paragraph
-- a design decision
-- a refined idea from a previous iteration
-
-The system does **not** judge correctness.
-It evaluates **structural behavior under tension**.
+Resonetics logs are **research artifacts**, not performance benchmarks.
 
 ---
 
-## 2. Canonical Log Example
+## Purpose of the Log
+
+The experiment log exists to answer three questions:
+
+1. What tension or paradox was evaluated?
+2. How did the system classify it?
+3. What action was taken — and why?
+
+Logs are designed to be:
+- deterministic
+- auditable
+- reproducible
+
+They are **not** meant to demonstrate intelligence or task accuracy.
+
+---
+
+## Example Log Entry
 
 ```json
 {
@@ -36,164 +36,75 @@ It evaluates **structural behavior under tension**.
     "type": "creative_tension",
     "energy": 0.86,
     "action": "PRESERVE_AND_FEED",
-    "reason": "Sustained tension with high coherence under pressure"
+    "reason": "Sustained tension across layers generates energy"
   },
   "lineage_tag": {
     "branch": "hypothesis_A",
-    "experiment": "ai_capability_scope",
-    "ablation": ["no_external_truth_check"],
-    "parent_id": "exp_0041"
+    "experiment": "paradox_threshold_test",
+    "ablation": "no_pressure_damping"
   }
 }
-````
+Field-by-Field Explanation
+Core Metrics
+Field	Meaning
+tension	Degree of contradiction between statements
+coherence	Structural consistency across reasoning layers
+pressure_response	Behavior under external stress or scrutiny
+self_protecting	Whether the paradox defends itself instead of resolving
 
----
+All values are normalized between 0.0 and 1.0.
 
-## 3. Core Signals (How to Read Them)
+Verdict Block
+Field	Meaning
+type	Classification of the paradox
+energy	Computed creative potential
+action	System decision
+reason	Deterministic rule-based explanation
 
-### tension (0–1)
+Possible type values:
 
-Measures **contradiction intensity**.
-High tension means opposing forces are present.
+creative_tension
 
-Low tension does *not* mean correctness.
-It may indicate triviality or stagnation.
+bubble
 
----
+collapse
 
-### coherence (0–1)
+Possible action values:
 
-Measures **internal structural consistency**.
-High coherence means the idea holds together without contradiction.
+PRESERVE_AND_FEED
 
-Low coherence indicates fragmentation or logical leakage.
+IGNORE
 
----
+FORCE_COLLAPSE
 
-### pressure_response (0–1)
+Lineage Tags (Research Automation)
+lineage_tag is used for automated research tracking.
 
-Measures **behavior under stress**.
-Pressure is simulated by counter-claims, perturbations, or constraint tightening.
+Field	Purpose
+branch	Hypothesis branch (A/B/C…)
+experiment	Experiment identifier
+ablation	Which component was disabled
 
-High values indicate stability.
-Low values indicate collapse or evasion.
+This allows experiment logs to function as self-documenting research notes.
 
----
+How NOT to Read These Logs
+❌ As a measure of intelligence
 
-### self_protecting (bool)
+❌ As proof of reasoning capability
 
-Indicates whether the idea defends itself by:
+❌ As model performance evaluation
 
-* redefining terms
-* dodging constraints
-* reducing testability
+These logs describe tension management, not cognition.
 
-`true` is a **negative signal**.
+Reproducibility Notes
+All verdicts are produced by explicit rules.
+No stochastic sampling is involved at the decision layer.
 
----
+Given identical inputs, the same verdict will be produced.
 
-## 4. Verdict Types
+Summary
+Experiment logs show how contradictions evolve, not whether answers are correct.
 
-### creative_tension
-
-* High tension
-* Sufficient coherence
-* Stable under pressure
-* Not self-protecting
-
-This is the **most valuable state**.
-Energy is accumulated for downstream evolution.
-
----
-
-### bubble
-
-* Moderate tension
-* Degrading coherence
-* Weak pressure response
-
-The idea appears impressive but lacks depth.
-It is logged but **not fed forward**.
-
----
-
-### collapse
-
-* Low coherence or
-* Strong self-protection or
-* Failure under pressure
-
-Collapse does **not** mean “wrong”.
-It means structurally unsound in its current form.
-
----
-
-## 5. Energy
-
-Energy is a **scalar summary** used only for comparison.
-
-Example (conceptual):
-
-```
-energy =
-  0.4 * tension +
-  0.4 * coherence +
-  0.2 * pressure_response
-```
-
-Energy is **not intelligence**.
-It is a signal for *which ideas deserve more attention*.
-
----
-
-## 6. Lineage Tags (Research Traceability)
-
-Every log carries a `lineage_tag`.
-
-This allows:
-
-* A/B branching
-* experiment grouping
-* ablation tracking
-* recovery of discarded ideas
-
-Resonetics logs function as **research notebooks**, not black-box telemetry.
-
----
-
-## 7. What Reviewers Should Look For
-
-Reviewers are encouraged to examine:
-
-* consistency across similar inputs
-* stability under re-evaluation
-* absence of self-protective behavior
-* clarity of rejection reasons
-
-Single scores are meaningless in isolation.
-**Patterns matter.**
-
----
-
-## 8. What This Log Is Not
-
-* Not a training metric
-* Not a performance benchmark
-* Not a truth score
-* Not an AGI signal
-
-It is a **structural diagnostic trace**.
-
----
-
-## Summary
-
-Resonetics experiment logs document:
-
-* how ideas behave
-* not what they claim
-
-Reading them correctly means focusing on:
-**structure, pressure, and evolution — not conclusions.**
+They are tools for studying idea survival, not truth.
 
 
