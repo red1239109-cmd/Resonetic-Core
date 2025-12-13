@@ -1,111 +1,81 @@
-# RELATION_TO_PARADOX_ENGINE.md  
-Relationship to the Paradox Refinement Engine
+# RELATION_TO_PARADOX_ENGINE.md
+## Relation to the Paradox Refinement Engine
 
-## Purpose
-This document clarifies the relationship between the **Resonetics Transformer**
-and the **Paradox Refinement Engine**.
+### Purpose
+This document clarifies how **Resonetics Transformer** relates to the **Paradox Refinement Engine**.
 
-Both systems belong to **Project Resonetics**,
-but they operate at **different layers of abstraction** and use **different optimization mechanisms**.
-
-They are related by **design philosophy**, not by shared code.
+Both belong to the broader *Resonetics* project, but they operate at **different abstraction layers** and use **different optimization mechanisms**.  
+They are related by **design philosophy**, not by shared code or parameter transfer.
 
 ---
 
-## High-Level Distinction
+## At a glance
 
 | Aspect | Resonetics Transformer | Paradox Refinement Engine |
-|------|------------------------|---------------------------|
-| Domain | Numeric representations | Natural language text |
-| Optimization | Gradient descent | Recursive critique loop |
-| Medium | Tensors / losses | Prompts / revisions |
-| Stability Mechanism | Uncertainty-weighted constraints | Confidence-weighted refinement |
-| Execution | Differentiable, continuous | Discrete, iterative |
+|---|---|---|
+| Domain | Numeric / tensor computation | Natural language text |
+| Optimization | Gradient-based learning | Recursive critique & rewrite loop |
+| Medium | Loss terms & differentiable signals | Prompts, rules, and edits |
+| Stabilization | Uncertainty-weighted constraints, boundary damping | Confidence-weighted refinement, rollback/reject |
+| Execution | Continuous, differentiable | Discrete, iterative |
 
 ---
 
-## Shared Principle: Constraint-Driven Reasoning
+## Shared principle: constraint-driven reasoning
 Both systems reject unconstrained generation.
 
 Instead of asking:
-> “What maximizes output?”
+> “How do we maximize output?”
 
-they ask:
-> “What must remain stable while change occurs?”
+They ask:
+> “During change, what must remain invariant?”
 
-This leads to a shared design stance:
-- constraints are **soft**, not absolute
-- instability is **measured**, not forbidden
-- confidence modulates strictness
-
----
-
-## Numeric vs Linguistic Analogue
-
-### Resonetics Transformer
-Implements constraints **numerically**:
-- auxiliary losses regulate structure and continuity
-- uncertainty parameters scale constraint strength
-- boundary layers damp internal instability
-
-The system learns stability through **differentiable signals**.
+This leads to shared design instincts:
+- Constraints are **tunable**, not absolute.
+- Instability is **measured**, not simply forbidden.
+- Confidence controls **how strict** the system should be.
 
 ---
 
-### Paradox Refinement Engine
-Implements constraints **linguistically**:
-- recursive critique evaluates generated text
-- meta-rules mirror numeric loss layers
-- convergence depends on internal consistency, not iteration count
+## How the mapping works (conceptually)
+This is an **analogy**, not a 1:1 implementation mapping.
 
-The system enforces stability through **explicit self-evaluation**.
-
----
-
-## Mapping of Core Concepts
-
-| Numeric System | Language System |
-|---------------|----------------|
-| Auxiliary loss | Meta-rule |
-| Uncertainty weighting | Confidence-based severity |
-| Boundary damping | Revision rejection / soft rollback |
-| Phase smoothness | Logical continuity |
-| Convergence | Meta-convergence |
-
-This mapping is conceptual, not literal.
-There is no one-to-one code equivalence.
+| Numeric system | Text system |
+|---|---|
+| Auxiliary losses | Meta-rules |
+| Uncertainty weighting (σ) | Confidence / severity weighting |
+| Boundary damping | Reject / rollback / soften edits |
+| Smoothness / continuity constraints | Logical continuity checks |
+| Convergence of training | Meta-convergence of revisions |
 
 ---
 
-## What This Relationship Is Not
+## What this relationship is NOT
 This relationship does **not** imply:
-- shared training loops
+- a shared training loop
 - direct parameter transfer
-- a unified execution engine
-- claims of artificial general intelligence
+- a unified runtime engine
+- claims about AGI
 
-Each system is self-contained.
+Each system is independently evaluable.
 
 ---
 
-## Why the Separation Matters
-Keeping these systems separate:
-- prevents category errors (language ≠ tensors)
-- allows independent evaluation
-- avoids overclaiming capability
+## Why keeping them separate matters
+Keeping them separate prevents:
+- category errors (tensors ≠ language)
+- overclaiming (“one system proves the other”)
+- blurry evaluation criteria
 
-The shared philosophy provides coherence.
-The separation provides rigor.
+Shared philosophy provides consistency; separation provides rigor.
 
 ---
 
 ## Summary
-The Resonetics Transformer and the Paradox Refinement Engine
-are two implementations of the same design intuition:
+Resonetics Transformer and the Paradox Refinement Engine are two implementations of the same design intuition:
 
-> **Stability emerges from measured constraints, not maximal freedom.**
+> Stability comes not from maximum freedom, but from **measured constraints**.
 
-One expresses this intuition numerically.
-The other expresses it linguistically.
+One expresses that intuition numerically; the other expresses it linguistically.  
+They are intentionally related, but not interdependent.
 
-They are related by intent, not dependency.
