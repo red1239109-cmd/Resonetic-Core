@@ -1,72 +1,146 @@
-# Resonetics Alpha v1: Sovereign AGI Core
+# Resonetics Alpha – Flow / Structure / Tension Demo
 
-> **"Thought Encoded in Resonance."**
-> An experimental cognitive architecture that embeds physical laws, structural constraints, and meta-cognition into differentiable mathematics.
+A research prototype exploring how philosophical constraints  
+(**flow, structure, and tension**) can be expressed as **differentiable learning signals**.
 
-## 🌌 Vision: The Sovereign Intelligence Principle
-**Resonetics** challenges the paradigm of data-driven imitation learning. Instead, it proposes a **"Constitutional Intelligence"** — an AI governed by an internal constitution of 8 immutable laws, encoded directly into its loss landscape.
-
-Unlike traditional models that learn *what* to think from data, Resonetics learns *how* to think from first principles.
-
-## 🧬 The 8-Layer Cognitive Architecture
-At its core lies the `SovereignLoss` function — a multi-objective optimizer that trains the model on 8 simultaneous dimensions of reasoning:
-
-### **I. Physical Resonance (The World's Grammar)**
-* **L1 | Gravity:** Attraction to empirical truth `(μ - target)²`
-* **L2 | Wave Nature:** Imposition of sinusoidal periodicity `sin(2πμ/3)²`
-* **L3 | Boundary Conditions:** Survival threshold enforcement `ReLU(1.5 - μ)²`
-* **L4 | Lattice Alignment:** Microscopic structural coherence `sin(πμ)²`
-
-### **II. Logical Crystallization (The Mind's Structure)**
-* **L5 | Quantization:** The "Rule of 3" — forcing discrete, decisive reasoning `(μ - round(μ/3)*3)²`
-* **L6 | Vital Entropy:** Anti-collapse mechanism preventing cognitive rigidity `-log(L₅ + ε)`
-
-### **III. Meta-Cognitive Layer (The Self's Reflection)**
-* **L7 | Temporal Consistency:** Identity preservation through time `|μₜ - μₜ₋₁|`
-* **L8 | Epistemic Humility:** Confidence calibration via uncertainty output `-N(μ, σ).entropy()`
-
-## ⚙️ Technical Innovation
-* **🧠 Dual-Head Architecture:** Separates **belief** (μ) from **confidence** (σ)
-* **⚖️ Autonomous Weight Balancing:** Self-adjusting layer importance via homoscedastic uncertainty
-* **📈 Live Cognitive Monitoring:** Real-time visualization of thought evolution
-
-## 🔬 Experimental Results
-The system demonstrates:
-1. **Structured Convergence:** Target-seeking while respecting physical constraints
-2. **Self-Regulating Uncertainty:** Adaptive confidence levels in predictions
-3. **Identity Preservation:** Stable reasoning patterns over time
-
-## 🚀 Quick Start
-
-### Installation
-```bash
-git clone https://github.com/your-username/Resonetics_Alpha_v1.git
-cd Resonetics_Alpha_v1
-pip install -r requirements.txt
-
-## ⚖️ License & Pricing
-
-**Project Resonetics** follows a **Dual-License model** to ensure sustainability while keeping code accessible to everyone.
-
-### 1. Open Source (AGPL-3.0)
-> **Best for:** Students, Researchers, Open Source Projects.
-* **Condition:** If you modify this code or use it in your service, you **must open-source your entire project** under AGPL-3.0.
-* **Cost:** Free.
-
-### 2. Commercial License
-> **Best for:** Startups, Proprietary SaaS, Internal Enterprise Tools.
-* **Benefits:** You can keep your source code private (Closed Source) and receive legal assurance.
-* **Cost:** Paid license required.
+**License:** AGPL-3.0  
+**Status:** Research / Experimental (Non-production)
 
 ---
 
-### 🏷️ Pricing Tiers
+## Overview
 
-| Tier | Target Audience | Price | Note |
-| :--- | :--- | :--- | :--- |
-| **Indie / Startup** | < 10 Employees | **Free** | *Registration required |
-| **Growth / Corp** | 10+ Employees | **$500 ~ $5,000 / year** | Based on scale |
+This repository contains a **single-file reference implementation** that demonstrates
+how abstract philosophical ideas can be mapped to concrete, trainable loss terms.
 
-> **"Free for the curious. Fair price for those who ship."**
+The system is **not an AGI**, not a general-purpose model, and not production-ready.
+It is a **controlled sandbox** for studying multi-objective optimization under
+conflicting constraints.
 
-📩 **Contact for Licensing:** [red1239109@gmail.com](mailto:red1239109@gmail.com)
+---
+
+## Core Idea
+
+Instead of treating all objectives as generic losses, we explicitly separate their roles:
+
+| Layer | Concept | Role in Training |
+|------|--------|------------------|
+| L1 | Reality | Match ground truth (MSE) |
+| L2 | Flow (Heraclitus) | Enforce smoothness of change |
+| L5 | Structure (Plato) | Attract solutions toward discrete structural manifolds |
+| L6 | Tension | Penalize simultaneous failure of Reality & Structure |
+| L7 | Self-consistency | Temporal stability via EMA teacher |
+| L8 | Humility | Learnable uncertainty (Gaussian NLL) |
+
+Each term is **differentiable**, **bounded**, and **independently weighted**
+using uncertainty-style auto-balancing.
+
+---
+
+## Philosophy → Math Mapping
+
+### L2 — Flow (Heraclitus)
+> “No step into the same river twice.”
+
+Implemented as **local smoothness** of the model output:
+
+- Penalizes abrupt changes
+- Does *not* bias the value itself
+- Enforces continuity of reasoning
+
+```text
+L2 ≈ (μ(x + ε) − μ(x))² / ε²
+
+L5 — Structure (Plato)
+
+“Forms attract imperfect instances.”
+
+Implemented as a soft periodic potential with minima at multiples of 3:
+
+L5 = 1 − cos(2πμ / 3)
+
+
+This avoids hard rounding and preserves gradient flow.
+
+L6 — Tension (Drama)
+
+“Reality and structure rarely agree.”
+
+True tension is modeled only when both constraints fail:
+
+L6 = tanh(α · RealityGap) × tanh(β · StructureGap)
+
+
+If either Reality or Structure is satisfied → tension is low
+
+If both fail → tension rises sharply
+
+This creates a genuine optimization dilemma instead of redundant penalties.
+
+L8 — Humility (Uncertainty)
+
+The model predicts its own uncertainty (σ), bounded smoothly in [0.1, 5.0].
+
+Prevents overconfidence
+
+Prevents evasion via infinite uncertainty
+
+Acts as a learned self-regularizer
+
+Auto-Balancing
+
+Loss weights are learned using a log-variance formulation
+(similar to Kendall et al., 2018), with smooth squashing for stability.
+
+No hand-tuned coefficients are required.
+
+Running the Demo
+Requirements
+
+Python 3.10+
+
+PyTorch
+
+matplotlib (optional, for plots)
+
+Execute
+python resonetics_alpha_grandmaster_v4_2_flow_structure_tension.py
+
+
+The script:
+
+Trains on a toy conflict scenario (Reality = 10 vs Structure = {9,12})
+
+Prints loss component dynamics
+
+Saves a convergence + tension plot
+
+What This Is Not
+
+❌ Not an AGI
+
+❌ Not a language model
+
+❌ Not a cognitive architecture
+
+❌ Not production-safe
+
+This code exists to test ideas, not to make claims.
+
+Known Limitations
+
+O(N) finite-difference flow estimation (not scalable)
+
+Toy 1D input space
+
+No guarantees of generalization
+
+Philosophical mappings are interpretive, not proven
+
+See KNOWN_ISSUES.md for details.
+
+License
+
+This project is licensed under AGPL-3.0.
+
+Commercial licensing may be available separately.
