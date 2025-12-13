@@ -1,5 +1,3 @@
----
-
 ## Autonomous Kubernetes Cluster Maintenance via Reinforcement Learning
 
 This project provides a **reinforcement learning environment** that simulates a Kubernetes cluster as a **3D tensor grid**, where an autonomous agent (“the gardener”) learns to manage resources under **strict budget constraints**.
