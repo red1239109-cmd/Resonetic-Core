@@ -88,5 +88,82 @@ These results validate that the environment meaningfully distinguishes between *
 
 This is a **research-grade abstraction**, designed to expose trade-offs that real systems often hide.
 
----
+Baseline Heuristic Policy
+
+To validate that the environment rewards structural decision-making rather than randomness, we include a simple, transparent rule-based heuristic policy as a baseline.
+
+This heuristic does not learn. It reacts deterministically to local observations and budget state.
+
+Heuristic Design Principles
+
+The policy follows three core rules:
+
+Prevent catastrophic failure first
+
+If any visible node has memory usage above a critical threshold, prioritize intervention.
+
+Critical-priority nodes are handled before non-critical ones.
+
+Act locally, not globally
+
+Decisions are based only on the agent’s 3×3 neighborhood and current budget.
+
+No access to full cluster state.
+
+Respect budget constraints
+
+Scaling is attempted only when budget allows meaningful impact.
+
+If budget is low, prefer cheaper local cleaning over expensive global actions.
+
+Action Logic (Simplified)
+
+At each step:
+
+If a hotspot is visible and budget ≥ scaling cost
+
+Perform Scale Hotspot action
+
+Else if current node has moderate load and budget ≥ cleaning cost
+
+Perform Clean Node action
+
+Else
+
+Move to a neighboring cell with higher observed load
+
+This creates a natural trade-off between:
+
+exploration (moving to detect problems)
+
+exploitation (spending budget to reduce entropy)
+
+Why This Baseline Matters
+
+This heuristic is intentionally:
+
+Weak (no foresight, no learning)
+
+Explainable (fully rule-based)
+
+Reproducible (no randomness beyond environment dynamics)
+
+Despite this, it consistently outperforms a random policy, demonstrating that:
+
+The environment encodes a meaningful structure where good decisions are possible,
+but not trivial.
+
+Any RL policy that fails to beat this heuristic is not learning the environment’s dynamics.
+
+Benchmark Context
+
+The heuristic serves as:
+
+a sanity check for reward shaping
+
+a lower bound for learned agents
+
+a reference point for ablation and curriculum experiments
+
+It is not intended to be optimal.
 
