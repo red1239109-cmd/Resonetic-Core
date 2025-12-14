@@ -1,197 +1,126 @@
-# Resonetics (Via Negativa) — Runtime Controls v1.0
+# README.md
 
-**Engineering Tension, Not Intelligence.**
+# Resonetics (Via Negativa / Gardener / Prophet)
+Autonomous stability experiments for “systems that drift toward collapse” — and agents that must keep them alive under constraints.
 
-`resonetics_via_negativa_runtime_controls_v1.py` is a small, auditable control layer that turns “contradiction signals” into **runtime behavior**:
+This repo currently contains three pillars:
 
-1) 🔥 **Verdict → Reward shaping**  
-2) 🧠 **Risk EMA → Action suppression (policy damping)**  
-3) 🪦 **Near-collapse → Forced survival policy switch**
+1) **Gardener (v3.3.2 + patches)**  
+   A bio-mimetic simulation where agents survive in a noisy entropy field (“Red Queen effect”).  
+   We measure and log *risk*, *verdict*, and now *flow*.
 
-This is **not AGI**, not a consciousness simulator, and not a chatbot.  
-It’s a **runtime governor**: it decides which tensions are worth feeding, which are noise, and which are dangerous.
+2) **Kubernetes Smart Tensor Env (v4.5)**  
+   A Gymnasium-compatible RL environment for cluster maintenance under strict budget constraints.
 
----
-
-## What problem does this solve?
-
-Most optimization loops (RL, online learning, adaptive systems) treat instability as a bug.
-
-Resonetics treats instability as **a structured signal**:
-
-- Some contradictions are **productive** (`creative_tension`)
-- Some are **inflated narratives** (`bubble`)
-- Some are **self-protecting breakdowns** (`collapse`)
-
-Instead of “always converge”, this layer asks:
-
-> Should this contradiction be preserved, ignored, or collapsed?
+3) **Prophet (Enterprise + Kernel)**  
+   A training loop with monitoring + checkpoints, enhanced by a mathematically meaningful “Resonetics Kernel”.
 
 ---
 
-## Core Concepts
+## Core Idea (One paragraph)
+Real systems don’t stay stable by default. Entropy creeps in: memory leaks, load drift, emergent hotspots. Resonetics models that drift and asks a practical question: **what policies keep a system alive when instability is inevitable?**  
+We use a “Via Negativa” control layer to identify failure modes and suppress actions that accelerate collapse.
 
-### Inputs: `ParadoxState`
+---
 
-A minimal state vector describing a contradiction in runtime terms:
+## Components
 
-- `tension` (0..1): how strong / “red-zone” the contradiction is  
-- `coherence` (0..1): structural consistency across layers  
-- `pressure_response` (0..1): how well it holds under stress  
-- `self_protecting` (bool): defensive / evasive behavior signal  
-- `confidence` (0..1, optional): extra reliability term (defaults to 0)
+### 1) Gardener: Entropy Grid + Agents
+**File:** `resonetics_v3_3_2_final_with_patches.py`
 
-```py
-state = ParadoxState(
-    tension=0.72,
-    coherence=0.85,
-    pressure_response=0.88,
-    self_protecting=False,
-    confidence=0.0
-)
-Outputs: Verdict + Energy + Action
-The evaluator returns a rule-based, reproducible decision:
+- **Reality**: `grid` (dirt/entropy intensity)
+- **Structure**: local rule (`find_dirty_neighbor`) + cleaning dynamics
+- **Tension**: risk model (entropy gradient + population volatility + emergency ratio)
+- **Flow (NEW)**: system sensitivity to small perturbations  
+  - “Input-noise Lipschitz-ish” measurement:
+    - define metrics `f(state)` such as total entropy and hotspot rate
+    - inject small noise `eps`
+    - compute `Flow ≈ (Δf²)/eps²`
+    - smooth with EMA and mix into risk
 
-type: creative_tension | bubble | collapse
+#### Logged signals (CSV)
+The simulation writes `resonetics_data.csv` with:
 
-energy: 0..1 (weighted structure score)
+- `Gen`
+- `Population`
+- `Avg_Energy`
+- `Total_Entropy`
+- `Emergency_Moves`
+- `Isolation_Saves`
+- `Entropy_Gradient`
+- `Population_Volatility`
+- `Emergency_Ratio`
+- `Collapse_Risk`
+- `Flow`
+- `Verdict` (`creative | bubble | collapse`)
 
-action: PRESERVE_AND_FEED | IGNORE | FORCE_COLLAPSE
+---
 
-reason: human-readable rationale
+### 2) Kubernetes Smart Tensor Environment (Gymnasium)
+**File:** `resonetics_k8s_v4_5_fixed.py`
 
-How it works
-1) 🔥 Verdict → Reward shaping
-Reward shaping uses the verdict type:
+A minimal, reproducible RL environment for “autonomous cluster maintenance”.
 
-creative_tension → reward bonus (scaled by energy)
+**Observation (30-dim vector)**  
+- 3×3 neighborhood × 3 channels = 27  
+  - channel 0: CPU
+  - channel 1: Memory (drifting upward)
+  - channel 2: Priority (critical vs non-critical)
+- + agent position (2)
+- + budget (1)
 
-bubble → mild penalty
+**Actions (Discrete 6)**
+- 0..3: move
+- 4: clean node (cheap)
+- 5: scale hotspots (expensive / partial scaling supported)
 
-collapse → strong penalty
+**Red Queen effect**
+- memory drifts upward each step → agent must continuously stabilize
 
-Default map:
+---
 
-py
+### 3) Prophet (Enterprise + Kernel)
+**File:** `resonetics_prophet_v8_4_2_enterprise_kernel.py`
+
+Enterprise-friendly trainer with:
+- monitoring (Prometheus / Flask health endpoints)
+- checkpoints
+- “ProphetOptimizer” that tunes LR based on predicted risk
+
+#### Resonetics Kernel v2 (A-Version Flow)
+This kernel makes “Flow / Structure / Tension” mathematically meaningful:
+
+- **Reality gap**: MSE(pred, target)
+- **Flow**: sensitivity of outputs to small input noise  
+  `flow = E[(f(x+eps·noise)-f(x))²] / eps²`
+- **Structure**: periodic attraction (default period=3)
+- **Tension**: interaction term `tanh(gap_R) * tanh(gap_S)`
+
+> Kernel goal: turn philosophical language into measurable regularizers without pretending it’s magic.
+
+---
+
+## Benchmark (Random vs Heuristic)
+======================================================================
+✅ BENCHMARK RESULTS (Random vs Heuristic)
+random | reward μ=-12.456 σ=4.821 | steps μ=312.4 | oom_rate=1.82 | crit_rate=0.68 | avg_load μ=0.512
+heuristic | reward μ=+18.912 σ=3.215 | steps μ=456.8 | oom_rate=0.34 | crit_rate=0.12 | avg_load μ=0.378
+Heuristic win-rate: 50/50 (ties: 0)
+
+---
+
+## Quickstart
+
+### Gardener
+```bash
+python resonetics_v3_3_2_final_with_patches.py
+# outputs resonetics_data.csv
+Kubernetes Env test
+bash
 코드 복사
-DEFAULT_REWARD_MAP = {
-  "creative_tension": +1.0,
-  "bubble": -0.4,
-  "collapse": -1.2,
-}
-2) 🧠 Risk EMA → Action suppression
-A risk EMA controller tracks ongoing risk and returns a damping factor alpha:
-
-risk low → alpha ≈ 1.0 (normal policy)
-
-risk high → alpha → min_alpha (conservative policy)
-
-This is designed to reduce action spikes during unstable periods.
-
-3) 🪦 Near-collapse → Forced survival switch
-When the system is near collapse, it returns a survival directive:
-
-Discrete systems: prefer stabilizing actions (clean/stabilize)
-
-Continuous systems: clamp magnitude, avoid exploration spikes
-
-Triggers (defaults):
-
-low energy or
-
-low coherence + weak pressure_response
-
-Quickstart
-Minimal example
-py
+python resonetics_k8s_v4_5_fixed.py
+Prophet (Enterprise + Kernel)
+bash
 코드 복사
-from resonetics_via_negativa_runtime_controls_v1 import (
-    ParadoxState, RiskEMAController, apply_controls
-)
-
-controller = RiskEMAController()
-
-state = ParadoxState(
-    tension=0.72,
-    coherence=0.85,
-    pressure_response=0.88,
-    self_protecting=False
-)
-
-base_reward = 0.10
-action = 5  # could be discrete (int) or continuous vector
-
-out = apply_controls(
-    state=state,
-    base_reward=base_reward,
-    controller=controller,
-    action_vec=action,
-    action_space_hint="discrete"
-)
-
-print(out["verdict"])
-print(out["reward"])
-print(out["risk"])
-print(out["survival"])
-Tuning
-All important behavior is explicitly configurable:
-
-DEFAULT_THRESHOLDS
-
-collapse / bubble classification boundaries
-
-near-collapse survival switch thresholds
-
-DEFAULT_WEIGHTS
-
-energy composition (tension/coherence/pressure/confidence)
-
-DEFAULT_ACTION_RULES
-
-EMA smoothing beta and damping range
-
-DEFAULT_REWARD_MAP
-
-reward shaping coefficients
-
-This is intended to be reviewer-friendly: no “magic learning”, only clear knobs.
-
-Design goals
-Rule-based, auditable, reproducible
-
-Runtime-safe: bounded outputs, clamped inputs
-
-Composable: drops into RL, adaptive control, online learning loops
-
-Via Negativa: remove failure modes before “adding intelligence”
-
-What this is NOT
-❌ Not AGI
-
-❌ Not consciousness
-
-❌ Not claiming intelligence emergence
-
-❌ Not a general-purpose reasoning engine
-
-Resonetics does not “think”.
-It filters which tensions are worth evolving.
-
-License
-AGPL-3.0 (see file header).
-If you use this over a network, you must provide source to users per AGPL.
-
-Philosophy
-“Perfection is achieved, not when there is nothing more to add,
-but when there is nothing left to take away.”
-— Antoine de Saint-Exupéry
-
-In this project, “take away” means:
-
-unsafe exploration under risk
-
-inflated contradictions (bubbles)
-
-defensive incoherence (collapse)
-
-What remains is a system that can hold tension long enough to do useful work.
+python resonetics_prophet_v8_4_2_enterprise_kernel.py --steps 2000
+# Optional: --no-monitor, --no-kernel
