@@ -111,13 +111,6 @@ not from general problem-solving capability.
 Any appearance of “general intelligence” should be understood as
 robust control under uncertainty, not domain-independent cognition.
 
-맞습니다.
-이 README에서는 “커널 설명”을 반드시 적어야 합니다.
-그런데 길게 쓰면 오히려 가치가 떨어지고, 지금 프로젝트 성격상 짧고 수학적으로 정확한 설명이 최선입니다.
-
-아래는 그대로 붙여 넣어도 되는 README 섹션입니다.
-(엔터프라이즈 독자 + 연구자 둘 다 이해하도록 설계했습니다)
-
 🔧 Resonetics Kernel (v2 – A Version: Flow)
 
 Resonetics Kernel is the mathematical core that translates philosophical constraints
