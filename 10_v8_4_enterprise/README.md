@@ -110,3 +110,119 @@ not from general problem-solving capability.
 
 Any appearance of “general intelligence” should be understood as
 robust control under uncertainty, not domain-independent cognition.
+
+맞습니다.
+이 README에서는 “커널 설명”을 반드시 적어야 합니다.
+그런데 길게 쓰면 오히려 가치가 떨어지고, 지금 프로젝트 성격상 짧고 수학적으로 정확한 설명이 최선입니다.
+
+아래는 그대로 붙여 넣어도 되는 README 섹션입니다.
+(엔터프라이즈 독자 + 연구자 둘 다 이해하도록 설계했습니다)
+
+🔧 Resonetics Kernel (v2 – A Version: Flow)
+
+Resonetics Kernel is the mathematical core that translates philosophical constraints
+into a physically meaningful loss function.
+
+It does not add intelligence.
+It shapes learning dynamics.
+
+Motivation
+
+Most systems optimize only for error minimization.
+
+The Resonetics Kernel asks a different question:
+
+Is this learning process structurally stable, smooth, and meaningfully constrained?
+
+Kernel Definition
+
+The kernel decomposes learning pressure into four interacting terms:
+
+Term	Meaning	Mathematical Role
+Reality Gap (R)	Fit to environment	Mean squared error
+Flow (F)	Smoothness under change	Input-noise Lipschitz regularization
+Structure (S)	Attraction to stable forms	Periodic structural potential
+Tension (T)	Productive contradiction	Interaction between R and S
+
+The composite loss is:
+
+L = wR·R + wF·F + wS·S + wT·T
+
+Flow Term (A Version)
+
+Flow measures whether small input perturbations cause disproportionately large output changes.
+
+Implementation:
+
+Injects controlled noise into inputs
+
+Measures output deviation
+
+Normalized by noise magnitude
+
+This approximates local Lipschitz continuity
+and prevents learning from becoming brittle or chaotic.
+
+Structure Term
+
+Structure introduces a weak attractor toward regular forms.
+
+It does not force predictions to specific values,
+but penalizes drifting away from stable periodic structure.
+
+This provides:
+
+Long-term regularization
+
+Resistance to overfitting spikes
+
+Interpretability of learned regimes
+
+Tension Term
+
+Tension is not error.
+
+It is the interaction between:
+
+what reality demands (R)
+
+what structure prefers (S)
+
+Only when both are non-zero does tension emerge.
+
+This preserves productive contradiction instead of collapsing it.
+
+Why This Is Not AGI
+
+The Resonetics Kernel does not:
+
+simulate reasoning
+
+encode goals
+
+generate concepts
+
+It merely constrains how learning moves.
+
+Creativity, if observed, is a side effect of stable tension, not intelligence.
+
+Versioning Note
+
+v8.4.1: Standard enterprise loss (MSE-based)
+
+v8.4.2: Same system, kernel-enhanced loss
+
+Numerical results across these versions are not directly comparable.
+
+Design Principle
+
+Do not teach the system what to think.
+Teach it how not to break while learning.
+
+The Resonetics Kernel is a loss-shaping mechanism that enforces smoothness, 
+structure, and productive tension during learning — without claiming intelligence.
+
+v8.4.2 introduces the Resonetics Kernel.
+Results are not numerically comparable to v8.4.1 due to loss semantics.
+
+
