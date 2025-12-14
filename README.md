@@ -1,3 +1,30 @@
+# Resonetics
+
+## What is Resonetics?
+
+Resonetics is **not an AGI**.
+It is a **dynamical control system** designed to prevent saturation
+by balancing **Structure**, **Flow**, and **Tension**.
+
+> Creativity is not optimization.  
+> It is the sustained management of contradiction.
+
+---
+
+### Core Idea (3-second read)
+
+- **Structure** prevents collapse into chaos (form, periodic constraint)
+- **Flow** prevents freezing and saturation (continuous change)
+- **Tension** rewards productive contradiction between reality and ideal
+
+Resonetics does **not** resolve tension.  
+It decides **which tensions deserve to live**.
+
+---
+
+📘 **Conceptual & Mathematical Details**  
+See [CONCEPTS.md](./CONCEPTS.md)
+
 Resonetics
 
 Engineering Tension, Not Intelligence
