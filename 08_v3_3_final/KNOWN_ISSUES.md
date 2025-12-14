@@ -1,192 +1,64 @@
 # KNOWN_ISSUES.md
-Known limitations, design trade-offs, and unresolved questions in the Resonetics project.
 
-This document is intentional.  
-Every item listed here is either:
-- a conscious design choice, or
-- an open problem kept visible on purpose.
+# Known Issues (as of 2025-12-14)
 
----
+## Gardener (resonetics_v3_3_2_final_with_patches.py)
 
-## 1) This Is Not Intelligence (By Design)
+### 1) Risk/Flow scale calibration
+- **Symptom**: `Collapse_Risk` can saturate near 1.0 if weights/thresholds are too aggressive.
+- **Impact**: verdict becomes mostly `collapse`, reducing usefulness.
+- **Mitigation**:
+  - lower `risk.w_entropy_grad` / `flow.w_flow`
+  - raise `risk.collapse_th`
+  - adjust `flow.eps` upward (e.g., 0.03~0.05) if flow becomes too noisy
 
-**Issue:**  
-Resonetics does not learn tasks, optimize rewards, or converge toward a goal in the traditional ML sense.
+### 2) Flow measurement is “system-level”, not “agent-level”
+- **Symptom**: flow reflects brittleness of the grid dynamics, not per-agent behavior.
+- **Impact**: good for collapse sensing, but not directly for per-agent action suppression unless you wire it.
+- **Mitigation**: later add `type: "agent"` flow (policy sensitivity) or feed system flow into agent decision rules.
 
-**Why it exists:**  
-The project explicitly avoids task optimization. Its purpose is to **measure and regulate contradiction**, not to solve problems.
+### 3) Torch device placement (CPU only in Gardener)
+- **Symptom**: Agent brains run on CPU tensors; no device management.
+- **Impact**: fine for small N, but GPU acceleration is not enabled.
+- **Mitigation**: optional refactor to move brains + hidden states onto CUDA when available.
 
-**Impact:**  
-- No benchmark-style “performance improvement”
-- No claim of general intelligence
-- Cannot be compared directly to RL agents, LLMs, or planners
+### 4) LSTM hidden-state lifetime
+- **Symptom**: hidden state persists indefinitely, can accumulate bias.
+- **Impact**: may cause “stale memory” behavior over long runs.
+- **Mitigation**: reset hidden every N steps or when verdict is collapse.
 
-**Status:**  
-Intentional. Not a bug.
-
----
-
-## 2) Verdict Thresholds Are Hand-Tuned
-
-**Issue:**  
-Thresholds for `collapse`, `bubble`, and `creative_tension` are manually specified.
-
-**Why it exists:**  
-Automatic threshold learning would collapse the system into self-justifying behavior.  
-Fixed thresholds keep the logic **auditable and falsifiable**.
-
-**Impact:**  
-- Requires human judgment to adjust
-- Sensitivity may vary across domains
-
-**Status:**  
-Known limitation. Possible future work: domain-specific presets (not self-learning).
+### 5) Logging robustness
+- **Symptom**: CSV writes buffered; abrupt kill may lose last buffer.
+- **Impact**: last chunk of run missing.
+- **Mitigation**: reduce `log_buffer_size`, or flush every N frames.
 
 ---
 
-## 3) Energy Is a Structural Heuristic
+## Kubernetes Env (resonetics_k8s_v4_5_fixed.py)
 
-**Issue:**  
-“Energy” is not a physical quantity and not guaranteed to correlate with usefulness.
+### 1) Termination policy is harsh
+- **Symptom**: any OOM ends episode.
+- **Impact**: can bias learning toward overly conservative policies.
+- **Mitigation**: change termination to allow limited OOM with penalty.
 
-**Why it exists:**  
-Energy is a **structural signal**, not a utility function.  
-It measures balance between tension, coherence, and pressure response.
-
-**Impact:**  
-- High energy ≠ correctness
-- Low energy ≠ uselessness
-
-**Status:**  
-Working as intended. Misuse as a reward proxy is discouraged.
+### 2) Reward shaping may require tuning per task
+- **Symptom**: scale/clean reward balance can favor one action.
+- **Mitigation**: tune `clean_cost`, `unit_cost`, and OOM penalties.
 
 ---
 
-## 4) Risk EMA Can Over-Suppress Exploration
+## Prophet Enterprise Kernel
 
-**Issue:**  
-When risk EMA rises quickly, action damping may become overly conservative.
+### 1) Dropout affects Flow if computed in training mode
+- **Fix recommended**: compute flow with `model.eval()` + `no_grad()`, then restore `model.train()`.
+- If you applied the diff patch you shared, you’re good.
 
-**Why it exists:**  
-Safety is prioritized over exploration near collapse states.
+### 2) RiskPredictor input shape edge cases
+- **Symptom**: `recent_error` shape mismatch.
+- **Fix**: shape coercion to `(B,1)` (also in your diff).
 
-**Impact:**  
-- Reduced behavioral diversity
-- Possible stagnation in edge cases
+### 3) “Structure period=3” is a design choice, not a theorem
+- **Symptom**: over-regularization to multiples of 3 can harm fit depending on target distribution.
+- **Mitigation**: expose `structure_period` in config and sweep it.
 
-**Mitigation:**  
-Tune `risk_ema_beta`, `min_alpha`, or temporarily disable suppression in controlled experiments.
 
-**Status:**  
-Trade-off accepted.
-
----
-
-## 5) Survival Switch Is Heuristic, Not Optimal
-
-**Issue:**  
-Near-collapse detection uses simple rules (energy + coherence + pressure).
-
-**Why it exists:**  
-Collapse is treated as a **failure mode**, not an optimization target.
-
-**Impact:**  
-- May trigger survival too early
-- Or fail to trigger in rare edge cases
-
-**Status:**  
-Known limitation. Chosen over opaque learned safety policies.
-
----
-
-## 6) No Internal Memory Across Runs
-
-**Issue:**  
-The system does not persist learning across executions.
-
-**Why it exists:**  
-Persistent memory risks narrative lock-in and self-confirmation.
-
-**Impact:**  
-- No long-term accumulation of behavior
-- Requires explicit experiment logging
-
-**Status:**  
-Intentional. External logs are the memory.
-
----
-
-## 7) Not Immune to Adversarial Inputs
-
-**Issue:**  
-Carefully crafted paradox states could exploit threshold boundaries.
-
-**Why it exists:**  
-Any rule-based system has boundary conditions.
-
-**Impact:**  
-- Possible oscillation near verdict edges
-- Requires careful interpretation of results
-
-**Status:**  
-Documented and accepted. This is a measurement tool, not a security system.
-
----
-
-## 8) Human Interpretation Is Required
-
-**Issue:**  
-Verdicts and actions do not explain “meaning” — only structure.
-
-**Why it exists:**  
-Resonetics refuses to hallucinate intent or semantics.
-
-**Impact:**  
-- Results must be read, not trusted blindly
-- Reviewer judgment is mandatory
-
-**Status:**  
-Core philosophical stance.
-
----
-
-## 9) Experimental Scope Is Narrow
-
-**Issue:**  
-Resonetics is tested on controlled, abstract environments.
-
-**Why it exists:**  
-The project explores *structure before scale*.
-
-**Impact:**  
-- Not validated in real-world decision systems
-- Transferability is unknown
-
-**Status:**  
-Open research direction.
-
----
-
-## 10) No Claim of Emergence
-
-**Issue:**  
-The system may appear “creative” in behavior or output.
-
-**Why it exists:**  
-Structured tension can look like creativity.
-
-**Clarification:**  
-Resonetics does **not** claim emergence, agency, or understanding.
-
-**Status:**  
-Firmly rejected as a goal.
-
----
-
-## Final Note
-
-These issues are not hidden because Resonetics is not selling certainty.
-
-It is a tool for **seeing where systems break, inflate, or deserve to continue**.
-
-If a limitation makes you uncomfortable, that discomfort is part of the measurement.
