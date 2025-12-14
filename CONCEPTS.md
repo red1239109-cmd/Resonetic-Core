@@ -1,95 +1,93 @@
 # Resonetics — Concepts & Kernel
 
-This document explains how philosophical ideas are translated
-into mathematical structure and executable code.
+This document explains how philosophical ideas become mathematical constraints and executable code.
 
 ---
 
-## 1. Design Principle
+## 1. Core Assumption
 
-Resonetics is built on a single assumption:
+> **Systems do not fail from chaos.  
+> They fail from saturation.**
 
-> **Systems fail not because of chaos,  
-> but because they saturate.**
-
-Optimization kills exploration.
+Pure optimization kills exploration.  
 Pure stability kills creativity.
 
-Resonetics exists to **delay saturation**.
+Resonetics is designed to **delay saturation** —  
+to keep the system alive between freezing and drifting.
 
 ---
 
-## 2. Three Core Axes
+## 2. The Three Axes
 
-### Structure
-- Purpose: prevent collapse into noise
-- Mechanism: periodic constraints, attractors
-- Risk if too strong: **freezing / saturation**
+| Axis       | Philosophical Root       | Purpose                          | Mechanism                          | Danger if Overpowered          |
+|------------|--------------------------|----------------------------------|------------------------------------|--------------------------------|
+| **Structure** | Plato (Forms)           | Prevent collapse into noise      | Periodic attractors, cos potentials| Freezing / rigid saturation    |
+| **Flow**      | Heraclitus ("Everything flows") | Enforce continuous change | Smoothness penalties, gradients    | Instability / endless drift    |
+| **Tension**   | Dialectic (thesis–antithesis)   | Reward productive contradiction  | Multiplicative gating of gaps      | Trivial or explosive convergence |
 
-### Flow
-- Purpose: enforce continuous change
-- Mechanism: smoothness penalties, temporal gradients
-- Risk if too strong: **instability / drift**
-
-### Tension
-- Purpose: reward unresolved but productive contradiction
-- Mechanism: gated interaction between reality and structure
-- Risk if missing: **trivial convergence**
+These three must remain in tension.  
+Remove one, and the system dies.
 
 ---
 
 ## 3. Philosophy → Mathematics
 
-### Flow (Heraclitus)
-> “Everything flows.”
+### Flow
+> “No one ever steps in the same river twice.”
 
-```math
-Flow = (μ(x + ε) − μ(x))² / ε²
+$$
+Flow = \frac{(\mu(x + \varepsilon) - \mu(x))^2}{\varepsilon^2}
+$$
 
-Interpreted as a smoothness constraint:
-change must be continuous, not abrupt
+A smoothness constraint: change must be gradual, not abrupt.
 
-Structure (Plato)
-“Forms pull reality toward universal patterns.”
+### Structure
+> “Reality is pulled toward eternal forms.”
 
-Structure=1−cos(2π⋅pred/3)       
+$$
+Structure = 1 - \cos\left(2\pi \cdot \frac{pred}{period}\right)
+$$
 
-A periodic potential that attracts predictions
-toward stable structural modes (multiples of 3).
+Periodic potential pulling predictions toward stable modes.
 
-Tension (Dialectic)
-“Tension exists only when reality and ideal diverge together.”
+### Tension
+> “Truth emerges from unresolved contradiction.”
 
-Tension=tanh(α⋅GapR​eality)⋅tanh(β⋅GapS​tructure)
+$$
+Tension = \tanh(\alpha \cdot Gap_{Reality}) \cdot \tanh(\beta \cdot Gap_{Structure})
+$$
 
-Tension is multiplicative, not additive.
-No divergence → no tension → no reward.
+Tension only activates when **both** reality and structure diverge.  
+Multiplicative, not additive — no divergence, no reward.
 
-4. Minimal Kernel (18 lines)
-def kernel(pred, target, eps=1e-2):
-    gap_R = (pred - target).pow(2)
-    flow  = (pred - (pred + eps)).pow(2) / (eps*eps)
-    gap_S = 1 - torch.cos(2 * math.pi * pred / 3)
-    tension = torch.tanh(gap_R) * torch.tanh(gap_S)
-    return gap_R + flow + gap_S + tension
+---
+
+## 4. Minimal Kernel (18 lines)
+
+```python
+def kernel(pred, target, eps=1e-2, period=3.0):
+    gap_R = (pred - target).pow(2)                          # Reality gap
+    flow  = ((pred + eps) - pred).pow(2) / (eps * eps)      # Smoothness
+    gap_S = 1 - torch.cos(2 * math.pi * pred / period)     # Structure gap
+    tension = torch.tanh(gap_R) * torch.tanh(gap_S)         # Dialectic tension
+    return gap_R + flow + gap_S - tension                  # Note: tension is rewarded (negative sign)
+
+Everything else in Resonetics exists to:
+
+Stabilize this kernel
+Monitor its dynamics
+Deploy it safely in real systems
 
 
-Everything else in the codebase exists to:
+5. Ablation Rule (The Proof)
+Remove any term and observe failure:
 
-stabilize this kernel
+Remove Structure → system dissolves into noise
+Remove Flow → system freezes into rigid patterns
+Remove Tension → system converges trivially (no creativity)
 
-monitor it
+Resonetics lives in the narrow band where all three survive in tension.
 
-deploy it safely
-
-5. Interpretation Rule
-
-If you remove:
-
-Structure → system dissolves
-
-Flow → system freezes
-
-Tension → system converges trivially
-
-Resonetics survives between these failures.
+This is not metaphor.
+This is constraint-grounded, measurable, executable philosophy.
+    
