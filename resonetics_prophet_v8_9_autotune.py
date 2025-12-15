@@ -12,7 +12,7 @@
 !python resonetics_prophet_v8_9_autotune.py --steps 300
 
 # ===== 3. 즉각 검증 =====
-import os  # <--- 여기에 추가했습니다!
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
