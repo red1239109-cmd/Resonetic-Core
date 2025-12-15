@@ -50,3 +50,15 @@ class KernelGovernor:
     def tick(self, signals: Dict[str, Any]) -> str:
         """signals 예: {'risk': 0.12, 'kernel_loss': 0.03, ...}"""
         return self.sm.step(signals)
+
+
+from __future__ import annotations
+from typing import Optional, Protocol, Tuple, Dict, Any
+
+class StateMachineLike(Protocol):
+    def step(self, signals: Dict[str, float]) -> Tuple[str, int, Dict[str, Any]]:
+        """
+        returns: (mode_name, status_code, debug_dict)
+        ex) ("CRUISE", 3, {"risk":0.12, "hysteresis":"hold"})
+        """
+        ...
