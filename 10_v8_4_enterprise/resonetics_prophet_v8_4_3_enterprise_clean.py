@@ -1,25 +1,22 @@
 # ==============================================================================
-# File: resonetics_prophet_v8_4_2_enterprise_kernel.py
+# File: resonetics_prophet_v8_4_3a_enterprise_kernel.py
 # Project: Resonetics (The Prophet) - Enterprise Edition (Kernel-Integrated)
-# Version: 8.4.2 (Kernel Loss + Metric Flow + Risk Target = Kernel Violation)
+# Version: 8.4.3a (Hotfix: remove redundant action forward + dropout restore safety)
 # Author: red1239109-cmd
 # License: AGPL-3.0
 #
-# Changes (requested 3 items):
-#  1) Kernel loss includes Flow constraint WITH gradients (loss_flow)
-#  2) metric_flow computed separately (eval + no_grad)
-#  3) Risk target changed to kernel violation: tanh(kernel_loss.detach())
+# Hotfix changes:
+#  1) Removed redundant: action = self.worker(worker_input) (was unused / double forward)
+#  2) Flow-loss dropout p=0 toggle now guarded with try/finally (restore guaranteed)
 #
-# Also kept:
-#  - RiskPredictor recent_error shape coercion safety
-#  - Predictor call uses worker_input directly (no duplicate features)
+# Notes:
+#  - ΔEMA is defined as ABS change of "batch-mean action" over time:
+#      delta = abs(mean(a_t) - mean(a_{t-1}))
 # ==============================================================================
 
 from __future__ import annotations
 
 import os
-import sys
-import io
 import time
 import math
 import signal
@@ -215,13 +212,20 @@ class ConfigManager:
             'risk_thresholds': {'panic': 0.5, 'alert': 0.2, 'warning': 0.1},
             'lr_multipliers': {'panic': 5.0, 'alert': 2.0, 'warning': 1.2, 'cruise': 0.5},
             'buffer_size': 10,
-            'risk_smoothing': 0.9
+            'risk_smoothing': 0.9,
+            'risk_sigmoid_k': 3.0,
+            'delta_ema_beta': 0.95,
         },
         'monitoring': {
             'metrics_port': 8000,
             'health_port': 8080,
             'enable_prometheus': True,
             'enable_health': True
+        },
+        'kernel': {
+            'eps': 1e-2,
+            'structure_period': 3.0,
+            'w': {"R": 1.0, "F": 0.4, "S": 0.3, "T": 0.3}
         }
     }
 
@@ -272,6 +276,12 @@ class ConfigManager:
 # Models
 # ------------------------------------------------------------------------------
 class RiskPredictor(nn.Module):
+    """
+    Expects:
+      state_features: (B,2)  e.g. [progress, delta_action_ema]
+      recent_error:   (B,1)
+    Concats -> (B,3)
+    """
     def __init__(self, input_dim: int = 3, hidden_dim: int = 32):
         super().__init__()
         self.input_dim = int(input_dim)
@@ -293,13 +303,11 @@ class RiskPredictor(nn.Module):
         if state.dim() == 1:
             state = state.unsqueeze(0)
 
-        # recent_error should be (B,1). Avoid making it (B,1,1).
         if recent_error.dim() == 1:
             recent_error = recent_error.unsqueeze(1)
         elif recent_error.dim() == 2 and recent_error.size(1) == 1:
             pass
         else:
-            # best-effort coercion
             recent_error = recent_error.view(recent_error.size(0), 1)
 
         feats = torch.cat([state, recent_error], dim=1)
@@ -308,7 +316,8 @@ class RiskPredictor(nn.Module):
         return self.net(feats)
 
 class WorkerAgent(nn.Module):
-    def __init__(self, input_dim: int = 2, hidden_dim: int = 32, output_dim: int = 1):
+    """Worker sees progress only (B,1)."""
+    def __init__(self, input_dim: int = 1, hidden_dim: int = 32, output_dim: int = 1):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -328,6 +337,21 @@ class WorkerAgent(nn.Module):
         if x.dim() == 1:
             x = x.unsqueeze(0)
         return self.net(x)
+
+# ------------------------------------------------------------------------------
+# Helpers: Dropout control (Flow-loss consistency)
+# ------------------------------------------------------------------------------
+def _set_dropout_p(model: nn.Module, p: float):
+    saved = []
+    for m in model.modules():
+        if isinstance(m, nn.Dropout):
+            saved.append((m, m.p))
+            m.p = float(p)
+    return saved
+
+def _restore_dropout(saved):
+    for m, p in saved:
+        m.p = p
 
 # ------------------------------------------------------------------------------
 # Optimizer wrapper
@@ -360,7 +384,7 @@ class ProphetOptimizer:
         risk = float(risk_score.detach().item())
         self.smoothed_risk = (self.smoothing * self.smoothed_risk) + ((1 - self.smoothing) * risk)
 
-        mult, mode, status = self._get_mode_multiplier(risk)
+        mult, mode, status = self._get_mode_multiplier(self.smoothed_risk)
         target_lr = self.base_lr * float(mult)
 
         self.current_lr = (0.8 * self.current_lr) + (0.2 * target_lr)
@@ -369,7 +393,7 @@ class ProphetOptimizer:
         for pg in self.optimizer.param_groups:
             pg['lr'] = self.current_lr
 
-        self.risk_history.append(risk)
+        self.risk_history.append(self.smoothed_risk)
         self.lr_history.append(self.current_lr)
         self.mode_history.append(mode)
         return self.current_lr, mode, status
@@ -404,7 +428,7 @@ def generate_dynamic_target(step: int, total_steps: int) -> float:
     return float(np.sin(t) * 0.3 + np.cos(t * 0.5) * 0.2 + noise)
 
 # ------------------------------------------------------------------------------
-# Resonetics Kernel v2 (3 requested changes implemented here)
+# Resonetics Kernel v2 (with try/finally restore)
 # ------------------------------------------------------------------------------
 def resonetics_kernel_v2(
     model: nn.Module,
@@ -414,37 +438,36 @@ def resonetics_kernel_v2(
     w: Optional[Dict[str, float]] = None,
     structure_period: float = 3.0
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """
-    Returns:
-      - kernel_loss (torch scalar): used for training (includes loss_flow WITH gradients)
-      - info (dict): metrics including metric_flow (eval/no_grad)
-    """
 
     if w is None:
-        # default weights (tune later; not part of the requested 3 changes)
         w = {"R": 1.0, "F": 0.4, "S": 0.3, "T": 0.3}
 
-    # 1) Forward pass (training prediction)
+    # 1) Forward pass (train path) for core gaps
     pred = model(x)
 
     # 2) Reality gap
     gap_R = (pred - target).pow(2).mean()
 
-    # 3) Flow loss (GRAD ON)  ✅ requested #1
+    # 3) Flow loss (GRAD ON) with CONSISTENT DROPOUT CONDITION + SAFE RESTORE
     noise = torch.randn_like(x)
-    pred2 = model(x + eps * noise)
-    loss_flow = ((pred2 - pred).pow(2).mean()) / (eps * eps)
+    saved = _set_dropout_p(model, 0.0)
+    try:
+        pred_flow_base = model(x)
+        pred2 = model(x + eps * noise)
+    finally:
+        _restore_dropout(saved)
+    loss_flow = ((pred2 - pred_flow_base).pow(2).mean()) / (eps * eps)
 
     # 4) Structure
     gap_S = (1.0 - torch.cos(2 * math.pi * pred / structure_period)).mean()
 
-    # 5) Tension (dialectic gating)
+    # 5) Tension
     tension = torch.tanh(gap_R) * torch.tanh(gap_S)
 
-    # 6) Kernel loss (includes flow constraint)
+    # 6) Kernel loss
     loss = (w["R"] * gap_R) + (w["F"] * loss_flow) + (w["S"] * gap_S) - (w["T"] * tension)
 
-    # 7) metric_flow (EVAL + NO_GRAD) ✅ requested #2
+    # 7) metric_flow (EVAL + NO_GRAD)
     was_training = model.training
     model.eval()
     with torch.no_grad():
@@ -483,7 +506,7 @@ class ResoneticsProphet:
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.worker = WorkerAgent().to(self.device)
+        self.worker = WorkerAgent(input_dim=1).to(self.device)
         self.worker_optimizer = optim.Adam(
             self.worker.parameters(),
             lr=float(self.config['optimizer']['base_lr']),
@@ -491,7 +514,7 @@ class ResoneticsProphet:
             weight_decay=float(self.config['optimizer']['weight_decay'])
         )
 
-        self.predictor = RiskPredictor().to(self.device)
+        self.predictor = RiskPredictor(input_dim=3).to(self.device)
         self.predictor_optimizer = optim.Adam(
             self.predictor.parameters(),
             lr=float(self.config['optimizer']['base_lr']) * 0.5,
@@ -503,10 +526,15 @@ class ResoneticsProphet:
         self.error_buffer = deque(maxlen=int(self.config['prophet']['buffer_size']))
         self.recent_error = torch.zeros((1, 1), device=self.device)
 
+        # ΔEMA definition:
+        # delta = abs(mean(a_t) - mean(a_{t-1}))  (batch-mean action drift)
+        self.delta_ema_beta = float(self.config['prophet'].get('delta_ema_beta', 0.95))
+        self.delta_action_ema = 0.0
+        self.prev_action_mean = None  # Optional[float]
+
         self.checkpoints: List[str] = []
         self.current_step = 0
         self.best_error = float('inf')
-
         self._final_checkpoint_saved = False
 
         self._install_signal_handlers()
@@ -514,7 +542,7 @@ class ResoneticsProphet:
 
         logger.info("ResoneticsProphet initialized")
         print("=" * 70)
-        print("🚀 RESONETICS PROPHET v8.4.2 - ENTERPRISE (KERNEL)")
+        print("🚀 RESONETICS PROPHET v8.4.3a - ENTERPRISE (KERNEL)")
         print("=" * 70)
         print(f"Device: {self.device}")
         print(f"Total Steps: {self.config['system']['steps']}")
@@ -548,10 +576,11 @@ class ResoneticsProphet:
         ckpt_interval = int(self.config['system']['checkpoint_interval'])
         batch_size = int(self.config['system']['batch_size'])
 
-        # Kernel knobs (kept simple; no extra config wiring)
-        kernel_eps = 1e-2
-        structure_period = 3.0
-        kernel_w = {"R": 1.0, "F": 0.4, "S": 0.3, "T": 0.3}
+        kernel_eps = float(self.config['kernel']['eps'])
+        structure_period = float(self.config['kernel']['structure_period'])
+        kernel_w = dict(self.config['kernel']['w'])
+
+        k_sig = float(self.config['prophet'].get('risk_sigmoid_k', 3.0))
 
         start_time = time.time()
         logger.info("Starting training loop")
@@ -565,13 +594,30 @@ class ResoneticsProphet:
                 progress = torch.full((batch_size, 1), step / max(1, steps), device=self.device, dtype=torch.float32)
                 recent_err = self.recent_error.expand(batch_size, 1)  # (B,1)
 
-                worker_input = torch.cat([progress, recent_err], dim=1)  # (B,2)
+                worker_input = progress  # (B,1)
 
-                # Predictor expects: state=(B,2), recent_error=(B,1)
-                predicted_risk = self.predictor(worker_input, recent_err)  # (B,1)
-                current_lr, mode, status = self.prophet_tuner.adjust(predicted_risk.mean())  # scalar decision
+                # (Hotfix #1) Removed redundant: action = self.worker(worker_input)
+                # Kernel will do the forward pass internally.
 
-                # --- Worker update uses KERNEL LOSS (includes Flow constraint with grad) ✅ ---
+                # Saturation proxy: ΔEMA on eval/no_grad (dropout OFF by eval)
+                with torch.no_grad():
+                    was_training = self.worker.training
+                    self.worker.eval()
+                    action_eval = self.worker(worker_input)
+                    if was_training:
+                        self.worker.train()
+
+                action_mean = float(action_eval.mean().item())
+                delta = 0.0 if self.prev_action_mean is None else abs(action_mean - self.prev_action_mean)
+                self.prev_action_mean = action_mean
+                self.delta_action_ema = (self.delta_ema_beta * self.delta_action_ema) + ((1.0 - self.delta_ema_beta) * delta)
+
+                delta_ema_tensor = torch.full((batch_size, 1), float(self.delta_action_ema), device=self.device, dtype=torch.float32)
+
+                state_features = torch.cat([progress, delta_ema_tensor], dim=1)  # (B,2)
+                predicted_risk = self.predictor(state_features, recent_err)      # (B,1)
+                current_lr, mode, status = self.prophet_tuner.adjust(predicted_risk.mean())
+
                 kernel_loss, kinfo = resonetics_kernel_v2(
                     model=self.worker,
                     x=worker_input,
@@ -581,10 +627,7 @@ class ResoneticsProphet:
                     structure_period=structure_period
                 )
 
-                # Use MSE proxy (gap_R) for buffer/logging
                 actual_error = torch.tensor(kinfo["gap_R"], device=self.device, dtype=torch.float32)
-
-                # Update error buffer (scalar)
                 self.error_buffer.append(float(actual_error.item()))
                 if self.error_buffer:
                     self.recent_error = torch.tensor(
@@ -598,21 +641,18 @@ class ResoneticsProphet:
                 torch.nn.utils.clip_grad_norm_(self.worker.parameters(), max_norm=1.0)
                 self.worker_optimizer.step()
 
-                # --- Predictor update: risk target = kernel violation ✅ requested #3 ---
-                target_risk = torch.tanh(kernel_loss.detach())
+                target_risk = torch.sigmoid(k_sig * kernel_loss.detach())
                 meta_loss = (predicted_risk.mean() - target_risk).pow(2)
 
                 self.predictor_optimizer.zero_grad(set_to_none=True)
                 meta_loss.backward()
                 self.predictor_optimizer.step()
 
-                # Monitoring
                 if self.config['system']['enable_monitoring']:
-                    # choose what "error" means in dashboards: kernel is more informative here
                     self.monitor.update_metrics(
                         lr=float(current_lr),
                         risk=float(predicted_risk.mean().item()),
-                        error=float(kinfo["loss"]),   # kernel loss as "actual_error" metric
+                        error=float(kinfo["loss"]),
                         step=int(step),
                         status=int(status)
                     )
@@ -623,9 +663,11 @@ class ResoneticsProphet:
                     print(
                         f"Step {step:5d}/{steps} | "
                         f"Risk: {predicted_risk.mean().item():5.3f} | "
+                        f"TargetRisk: {float(target_risk.item()):5.3f} | "
                         f"MSE: {kinfo['gap_R']:7.5f} | "
                         f"Kernel: {kinfo['loss']:7.5f} | "
                         f"Flow(metric): {kinfo['metric_flow']:7.5f} | "
+                        f"ΔEMA: {float(self.delta_action_ema):7.5f} | "
                         f"LR: {current_lr:.5f} | "
                         f"{mode} | {sps:.1f} steps/sec"
                     )
@@ -633,7 +675,6 @@ class ResoneticsProphet:
                 if self.config['system']['save_checkpoints'] and step > 0 and (step % ckpt_interval == 0):
                     self._save_checkpoint(step, float(kinfo["loss"]), final=False)
 
-                # Track best as kernel loss (more aligned with your “law”)
                 if kinfo["loss"] < self.best_error:
                     self.best_error = float(kinfo["loss"])
 
@@ -666,8 +707,9 @@ class ResoneticsProphet:
             'worker_optimizer': self.worker_optimizer.state_dict(),
             'predictor_optimizer': self.predictor_optimizer.state_dict(),
             'prophet_stats': self.prophet_tuner.get_statistics(),
+            'delta_action_ema': float(self.delta_action_ema),
             'timestamp': float(time.time()),
-            'version': "8.4.2_kernel",
+            'version': "8.4.3a_kernel",
         }
 
         os.makedirs("checkpoints", exist_ok=True)
@@ -705,7 +747,7 @@ class ResoneticsProphet:
 # ------------------------------------------------------------------------------
 def main():
     import argparse
-    p = argparse.ArgumentParser(description="Resonetics Prophet v8.4.2 (Kernel)")
+    p = argparse.ArgumentParser(description="Resonetics Prophet v8.4.3a (Kernel)")
     p.add_argument('--config', type=str, default=None, help='Path to config file')
     p.add_argument('--no-monitor', action='store_true', help='Disable monitoring')
     p.add_argument('--steps', type=int, default=None, help='Override total training steps')
@@ -728,4 +770,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
