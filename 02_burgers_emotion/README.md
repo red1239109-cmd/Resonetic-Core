@@ -1,1 +1,1 @@
-Resonetics 데모
+(Resonetics Demo)
