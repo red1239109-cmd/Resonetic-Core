@@ -1,17 +1,20 @@
+#!/usr/bin/env python3
 # ==============================================================================
-# File: resonetics_prophet_v8_4_3a_enterprise_kernel.py
-# Project: Resonetics (The Prophet) - Enterprise Edition (Kernel-Integrated)
-# Version: 8.4.3a (Hotfix: remove redundant action forward + dropout restore safety)
+# File: resonetics_prophet_v8_5_0_enterprise_kernel_auto.py
+# Project: Resonetics (The Prophet) - Enterprise Edition (Auto-Tuning Kernel)
+# Version: 8.5.0 (Kernel PID Auto-Tuning Integrated)
 # Author: red1239109-cmd
 # License: AGPL-3.0
 #
-# Hotfix changes:
-#  1) Removed redundant: action = self.worker(worker_input) (was unused / double forward)
-#  2) Flow-loss dropout p=0 toggle now guarded with try/finally (restore guaranteed)
+# Enhanced Features:
+#   1. Enterprise-grade monitoring (Prometheus/Flask)
+#   2. Hotfix: remove redundant action forward + dropout restore safety
+#   3. Dual-loop control: ProphetOptimizer (LR) + KernelPIDAutoTuner (Kernel params)
 #
-# Notes:
-#  - ΔEMA is defined as ABS change of "batch-mean action" over time:
-#      delta = abs(mean(a_t) - mean(a_{t-1}))
+# Philosophy: 
+#   - Learning Rate tunes the "speed" of learning
+#   - Kernel Parameters tune the "shape" of the loss landscape
+#   - Together they form a complete adaptive optimization system
 # ==============================================================================
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ import atexit
 import logging
 import threading
 from collections import deque
+from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Tuple, List
 
 import torch
@@ -89,6 +93,117 @@ except Exception:
     logger.warning("PyYAML not available. Config file loading disabled; defaults/env only.")
 
 # ------------------------------------------------------------------------------
+# [New from v8.9] PID Auto-Tuning Utilities
+# ------------------------------------------------------------------------------
+def clamp(x: float, lo: float, hi: float) -> float:
+    """Clamp value between bounds."""
+    return max(lo, min(hi, x))
+
+@dataclass
+class PIDGains:
+    """PID controller gains."""
+    kp: float
+    ki: float
+    kd: float
+
+@dataclass
+class PIDState:
+    """PID controller internal state."""
+    integ: float = 0.0
+    prev_err: Optional[float] = None
+
+class PIDController:
+    """Discrete-time PID controller with integral clamping."""
+    
+    def __init__(self, gains: PIDGains, out_limits=(-1.0, 1.0), integ_limits=(-5.0, 5.0)):
+        self.g = gains
+        self.out_lo, self.out_hi = out_limits
+        self.i_lo, self.i_hi = integ_limits
+        self.s = PIDState()
+    
+    def step(self, err: float, dt: float = 1.0) -> float:
+        """Compute PID control output."""
+        # Integral term with clamping
+        self.s.integ = clamp(self.s.integ + err * dt, self.i_lo, self.i_hi)
+        
+        # Derivative term
+        if self.s.prev_err is None:
+            derr = 0.0
+        else:
+            derr = (err - self.s.prev_err) / max(1e-8, dt)
+        
+        # PID output
+        u = (self.g.kp * err) + (self.g.ki * self.s.integ) + (self.g.kd * derr)
+        self.s.prev_err = err
+        
+        # Output clamping
+        return clamp(u, self.out_lo, self.out_hi)
+
+class KernelPIDAutoTuner:
+    """
+    Auto-tuning system for kernel parameters.
+    Maintains optimal balance between Reality (gap_R) and Flow (metric_flow).
+    """
+    
+    def __init__(self, target_gap_R: float = 0.1, target_flow: float = 0.2):
+        self.target_gap_R = target_gap_R
+        self.target_flow = target_flow
+        
+        # PID controllers for each dimension
+        self.pid_gapR = PIDController(
+            PIDGains(0.40, 0.05, 0.05),
+            out_limits=(-0.5, 0.5)
+        )
+        self.pid_flow = PIDController(
+            PIDGains(0.30, 0.03, 0.03),
+            out_limits=(-0.5, 0.5)
+        )
+        
+        # Tunable parameters (initial defaults)
+        self.wR = 1.0      # Reality weight (primary knob)
+        self.eps = 1e-2    # Flow perturbation magnitude
+        
+        # History for monitoring
+        self.history_wR = deque(maxlen=100)
+        self.history_eps = deque(maxlen=100)
+    
+    def update(self, current_gap_R: float, current_flow: float) -> Dict[str, float]:
+        """
+        Update kernel parameters based on current performance.
+        
+        Logic:
+        1. If gap_R is too high -> increase wR (focus more on reality)
+        2. If flow is too high -> decrease eps (reduce perturbation)
+        """
+        # 1. Reality gap control
+        err_R = current_gap_R - self.target_gap_R
+        uR = self.pid_gapR.step(err_R)
+        self.wR = clamp(self.wR + (0.2 * uR), 0.2, 5.0)
+        
+        # 2. Flow control
+        err_F = current_flow - self.target_flow
+        uF = self.pid_flow.step(err_F)
+        self.eps = clamp(self.eps * (1.0 - 0.3 * uF), 1e-4, 5e-2)
+        
+        # Record history
+        self.history_wR.append(self.wR)
+        self.history_eps.append(self.eps)
+        
+        return {"wR": self.wR, "eps": self.eps}
+    
+    def get_statistics(self) -> Dict[str, float]:
+        """Return tuning statistics for monitoring."""
+        if not self.history_wR:
+            return {}
+        
+        return {
+            "wR_current": float(self.wR),
+            "eps_current": float(self.eps),
+            "wR_mean": float(np.mean(list(self.history_wR))) if self.history_wR else 0.0,
+            "eps_mean": float(np.mean(list(self.history_eps))) if self.history_eps else 0.0,
+        }
+
+# ------------------------------------------------------------------------------
 # Enterprise Monitoring
 # ------------------------------------------------------------------------------
 class EnterpriseMonitor:
@@ -121,6 +236,8 @@ class EnterpriseMonitor:
             'actual_error': Gauge('prophet_actual_error', 'Actual task error proxy (Kernel/MSE)', registry=self.registry),
             'training_step': Gauge('prophet_training_step_total', 'Total training steps completed', registry=self.registry),
             'system_status': Gauge('prophet_system_status', 'System status (0=panic, 1=alert, 2=warning, 3=cruise)', registry=self.registry),
+            'kernel_wR': Gauge('prophet_kernel_wR', 'Auto-tuned Reality weight', registry=self.registry),
+            'kernel_eps': Gauge('prophet_kernel_eps', 'Auto-tuned perturbation epsilon', registry=self.registry),
         }
 
     def _setup_health_endpoints(self):
@@ -172,7 +289,8 @@ class EnterpriseMonitor:
         else:
             logger.info("Health endpoints disabled")
 
-    def update_metrics(self, lr: float, risk: float, error: float, step: int, status: int):
+    def update_metrics(self, lr: float, risk: float, error: float, step: int, 
+                      status: int, wR: float = 1.0, eps: float = 1e-2):
         if not self.enable_prometheus:
             return
         try:
@@ -181,6 +299,8 @@ class EnterpriseMonitor:
             self.metrics['actual_error'].set(float(error))
             self.metrics['training_step'].set(int(step))
             self.metrics['system_status'].set(int(status))
+            self.metrics['kernel_wR'].set(float(wR))
+            self.metrics['kernel_eps'].set(float(eps))
         except Exception as e:
             logger.debug(f"Metric update skipped: {e}")
 
@@ -226,6 +346,11 @@ class ConfigManager:
             'eps': 1e-2,
             'structure_period': 3.0,
             'w': {"R": 1.0, "F": 0.4, "S": 0.3, "T": 0.3}
+        },
+        'autotune': {
+            'enable_kernel_tuning': True,
+            'target_gap_R': 0.1,
+            'target_flow': 0.2
         }
     }
 
@@ -489,7 +614,7 @@ def resonetics_kernel_v2(
     return loss, info
 
 # ------------------------------------------------------------------------------
-# Main system
+# Main system (Dual-Loop Control)
 # ------------------------------------------------------------------------------
 class ResoneticsProphet:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -522,6 +647,18 @@ class ResoneticsProphet:
         )
 
         self.prophet_tuner = ProphetOptimizer(self.worker_optimizer, self.config)
+        
+        # [NEW] Kernel Auto-Tuner for dual-loop control
+        self.enable_kernel_tuning = bool(self.config['autotune']['enable_kernel_tuning'])
+        if self.enable_kernel_tuning:
+            self.kernel_tuner = KernelPIDAutoTuner(
+                target_gap_R=float(self.config['autotune']['target_gap_R']),
+                target_flow=float(self.config['autotune']['target_flow'])
+            )
+            logger.info("Kernel PID Auto-Tuner initialized")
+        else:
+            self.kernel_tuner = None
+            logger.info("Kernel tuning disabled (using static parameters)")
 
         self.error_buffer = deque(maxlen=int(self.config['prophet']['buffer_size']))
         self.recent_error = torch.zeros((1, 1), device=self.device)
@@ -540,14 +677,15 @@ class ResoneticsProphet:
         self._install_signal_handlers()
         atexit.register(self._cleanup)
 
-        logger.info("ResoneticsProphet initialized")
+        logger.info("ResoneticsProphet initialized (Dual-Loop Control)")
         print("=" * 70)
-        print("🚀 RESONETICS PROPHET v8.4.3a - ENTERPRISE (KERNEL)")
+        print("🚀 RESONETICS PROPHET v8.5.0 - ENTERPRISE (DUAL-LOOP CONTROL)")
         print("=" * 70)
         print(f"Device: {self.device}")
         print(f"Total Steps: {self.config['system']['steps']}")
         print(f"Batch Size: {self.config['system']['batch_size']}")
         print(f"Monitoring: {'Enabled' if self.config['system']['enable_monitoring'] else 'Disabled'}")
+        print(f"Kernel Auto-Tuning: {'Enabled' if self.enable_kernel_tuning else 'Disabled'}")
         print("=" * 70)
 
     def _install_signal_handlers(self):
@@ -576,14 +714,15 @@ class ResoneticsProphet:
         ckpt_interval = int(self.config['system']['checkpoint_interval'])
         batch_size = int(self.config['system']['batch_size'])
 
-        kernel_eps = float(self.config['kernel']['eps'])
+        # Initial kernel parameters (may be tuned dynamically)
+        current_eps = float(self.config['kernel']['eps'])
         structure_period = float(self.config['kernel']['structure_period'])
-        kernel_w = dict(self.config['kernel']['w'])
+        current_w = dict(self.config['kernel']['w'])
 
         k_sig = float(self.config['prophet'].get('risk_sigmoid_k', 3.0))
 
         start_time = time.time()
-        logger.info("Starting training loop")
+        logger.info("Starting training loop (Dual-Loop Control)")
 
         for step in range(steps):
             self.current_step = step
@@ -595,9 +734,6 @@ class ResoneticsProphet:
                 recent_err = self.recent_error.expand(batch_size, 1)  # (B,1)
 
                 worker_input = progress  # (B,1)
-
-                # (Hotfix #1) Removed redundant: action = self.worker(worker_input)
-                # Kernel will do the forward pass internally.
 
                 # Saturation proxy: ΔEMA on eval/no_grad (dropout OFF by eval)
                 with torch.no_grad():
@@ -618,12 +754,13 @@ class ResoneticsProphet:
                 predicted_risk = self.predictor(state_features, recent_err)      # (B,1)
                 current_lr, mode, status = self.prophet_tuner.adjust(predicted_risk.mean())
 
+                # [MODIFIED] Use dynamic kernel parameters if tuning is enabled
                 kernel_loss, kinfo = resonetics_kernel_v2(
                     model=self.worker,
                     x=worker_input,
                     target=target,
-                    eps=kernel_eps,
-                    w=kernel_w,
+                    eps=current_eps,      # Dynamic epsilon
+                    w=current_w,          # Dynamic weights
                     structure_period=structure_period
                 )
 
@@ -648,29 +785,49 @@ class ResoneticsProphet:
                 meta_loss.backward()
                 self.predictor_optimizer.step()
 
+                # [NEW] Dual-loop: Update kernel parameters based on performance
+                if self.enable_kernel_tuning and self.kernel_tuner is not None:
+                    new_knobs = self.kernel_tuner.update(
+                        current_gap_R=kinfo['gap_R'],
+                        current_flow=kinfo['metric_flow']
+                    )
+                    # Update parameters for next iteration
+                    current_w['R'] = new_knobs['wR']
+                    current_eps = new_knobs['eps']
+
                 if self.config['system']['enable_monitoring']:
                     self.monitor.update_metrics(
                         lr=float(current_lr),
                         risk=float(predicted_risk.mean().item()),
                         error=float(kinfo["loss"]),
                         step=int(step),
-                        status=int(status)
+                        status=int(status),
+                        wR=float(current_w['R']),
+                        eps=float(current_eps)
                     )
 
                 if step % log_interval == 0:
                     elapsed = time.time() - start_time
                     sps = step / elapsed if elapsed > 0 else 0.0
-                    print(
+                    
+                    # Base log line
+                    log_line = (
                         f"Step {step:5d}/{steps} | "
                         f"Risk: {predicted_risk.mean().item():5.3f} | "
                         f"TargetRisk: {float(target_risk.item()):5.3f} | "
                         f"MSE: {kinfo['gap_R']:7.5f} | "
                         f"Kernel: {kinfo['loss']:7.5f} | "
-                        f"Flow(metric): {kinfo['metric_flow']:7.5f} | "
+                        f"Flow: {kinfo['metric_flow']:7.5f} | "
                         f"ΔEMA: {float(self.delta_action_ema):7.5f} | "
                         f"LR: {current_lr:.5f} | "
                         f"{mode} | {sps:.1f} steps/sec"
                     )
+                    
+                    # Add tuning info if enabled
+                    if self.enable_kernel_tuning:
+                        log_line += f"\n   [Auto-Tune] wR: {current_w['R']:.3f} | eps: {current_eps:.5f}"
+                    
+                    print(log_line)
 
                 if self.config['system']['save_checkpoints'] and step > 0 and (step % ckpt_interval == 0):
                     self._save_checkpoint(step, float(kinfo["loss"]), final=False)
@@ -689,6 +846,11 @@ class ResoneticsProphet:
         print("\n" + "=" * 70)
         print(f"✅ Training completed in {elapsed:.1f} seconds")
         print(f"🏆 Best kernel loss: {self.best_error:.6f}")
+        
+        # Show final tuning statistics
+        if self.enable_kernel_tuning and self.kernel_tuner is not None:
+            stats = self.kernel_tuner.get_statistics()
+            print(f"🔧 Final tuning: wR={stats['wR_current']:.3f}, eps={stats['eps_current']:.5f}")
 
         if self.config['system']['save_checkpoints']:
             self._save_checkpoint(self.current_step, self.best_error, final=True)
@@ -699,6 +861,11 @@ class ResoneticsProphet:
         if final and self._final_checkpoint_saved:
             return
 
+        # Gather tuning statistics if available
+        tuning_stats = None
+        if self.enable_kernel_tuning and self.kernel_tuner is not None:
+            tuning_stats = self.kernel_tuner.get_statistics()
+
         ckpt = {
             'step': int(step),
             'error': float(error),
@@ -707,9 +874,10 @@ class ResoneticsProphet:
             'worker_optimizer': self.worker_optimizer.state_dict(),
             'predictor_optimizer': self.predictor_optimizer.state_dict(),
             'prophet_stats': self.prophet_tuner.get_statistics(),
+            'kernel_tuning_stats': tuning_stats,
             'delta_action_ema': float(self.delta_action_ema),
             'timestamp': float(time.time()),
-            'version': "8.4.3a_kernel",
+            'version': "8.5.0_dual_loop",
         }
 
         os.makedirs("checkpoints", exist_ok=True)
@@ -747,9 +915,10 @@ class ResoneticsProphet:
 # ------------------------------------------------------------------------------
 def main():
     import argparse
-    p = argparse.ArgumentParser(description="Resonetics Prophet v8.4.3a (Kernel)")
+    p = argparse.ArgumentParser(description="Resonetics Prophet v8.5.0 (Dual-Loop Control)")
     p.add_argument('--config', type=str, default=None, help='Path to config file')
     p.add_argument('--no-monitor', action='store_true', help='Disable monitoring')
+    p.add_argument('--no-tune', action='store_true', help='Disable kernel auto-tuning')
     p.add_argument('--steps', type=int, default=None, help='Override total training steps')
     p.add_argument('--batch-size', type=int, default=None, help='Override batch size')
     args = p.parse_args()
@@ -760,8 +929,13 @@ def main():
         cfg['system']['enable_monitoring'] = False
         cfg['monitoring']['enable_prometheus'] = False
         cfg['monitoring']['enable_health'] = False
+    
+    if args.no_tune:
+        cfg['autotune']['enable_kernel_tuning'] = False
+    
     if args.steps is not None:
         cfg['system']['steps'] = int(args.steps)
+    
     if args.batch_size is not None:
         cfg['system']['batch_size'] = int(args.batch_size)
 
