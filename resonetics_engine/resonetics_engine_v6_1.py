@@ -12,14 +12,6 @@
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # ==============================================================================
 
 from __future__ import annotations
@@ -45,25 +37,33 @@ from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTEN
 
 import numpy as np
 
-# [Opt 1] Fast JSON Serialization
+# ------------------------------------------------------------------ #
+# Dependency Checks (Safe Import)
+# ------------------------------------------------------------------ #
 try:
-    import orjson # pip install orjson
+    import orjson
 except ImportError:
-    print("Error: pip install orjson")
-    sys.exit(1)
+    # Fallback to standard json if orjson is missing (Safety)
+    import json as orjson
+    print("Warning: 'orjson' not found. Using standard json (slower).")
 
 try:
     from ripser import ripser
     from gudhi.bottleneck_distance import bottleneck_distance
 except ImportError:
-    print("Error: Missing TDA libs")
-    sys.exit(1)
+    print("Warning: TDA libs (ripser/gudhi) missing. TDA features will be disabled.")
+    # Dummy mocks to prevent import errors if just inspecting code
+    ripser = None
+    bottleneck_distance = None
 
+# ------------------------------------------------------------------ #
+# Infrastructure Setup
+# ------------------------------------------------------------------ #
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 log = logging.getLogger("resonetics-v6.1")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# ... (Metrics & Config are same) ...
+# Prometheus Metrics
 INFERENCE_REQUESTS = Counter('inference_requests_total', 'Total inference requests')
 INFERENCE_ERRORS = Counter('inference_errors_total', 'Total inference errors')
 TDA_CALC_TIME = Histogram('tda_calc_seconds', 'Time spent in TDA calculation')
@@ -83,18 +83,22 @@ class ResoneticConfig:
     tda_stride: int = 2
     inference_timeout: float = 15.0
 
-# ... (SizedLRUCache same) ...
+# ------------------------------------------------------------------ #
+# Memory-Safe Caching
+# ------------------------------------------------------------------ #
 class SizedLRUCache:
     def __init__(self, max_mb: int):
         self.max_bytes = max_mb * 1024 * 1024
         self.curr_bytes = 0
         self.cache: Dict[str, float] = {}
         self.order: List[str] = []
+
     def get(self, key: str) -> Optional[float]:
         if key in self.cache:
             self.order.remove(key); self.order.append(key)
             return self.cache[key]
         return None
+
     def put(self, key: str, value: float):
         if key in self.cache:
             self.curr_bytes -= sys.getsizeof(key) + sys.getsizeof(self.cache[key])
@@ -109,21 +113,21 @@ class SizedLRUCache:
         self.curr_bytes += item_size
         CACHE_SIZE_BYTES.set(self.curr_bytes)
 
-# ... (TDA Task same) ...
+# ------------------------------------------------------------------ #
+# Robust TDA Logic (CPU-Bound Task)
+# ------------------------------------------------------------------ #
 def _compute_topology_task(x_bytes: bytes, y_bytes: bytes, cfg_dict: dict) -> Optional[float]:
+    if ripser is None: return None # Library missing check
     try:
         shape = (cfg_dict['system_dim'],)
         x_np = np.frombuffer(x_bytes, dtype=np.float32).reshape(shape).flatten()
         y_np = np.frombuffer(y_bytes, dtype=np.float32).reshape(shape).flatten()
         window = cfg_dict['tda_window']; stride = cfg_dict['tda_stride']
         
-        # [Opt 3] Early Exit for small vectors (Noise filter)
         if x_np.shape[0] < window * 2: return None
 
         def embed(sig):
             n = sig.shape[0]
-            # Vectorized embedding (slightly faster than list comp)
-            # But kept simple for safety here
             points = [sig[i : i + window] for i in range(0, n - window + 1, stride)]
             return np.array(points)
 
@@ -138,11 +142,17 @@ def _compute_topology_task(x_bytes: bytes, y_bytes: bytes, cfg_dict: dict) -> Op
         return float(bottleneck_distance(dgm_x, dgm_y))
     except: return None
 
-# ... (Hybrid Manager same) ...
+# ------------------------------------------------------------------ #
+# Hybrid Topology Manager
+# ------------------------------------------------------------------ #
 class HybridTopoManager:
     def __init__(self, cfg: ResoneticConfig):
         self.cfg = cfg
-        ctx = multiprocessing.get_context("spawn")
+        # Safe multiprocessing context
+        try:
+            ctx = multiprocessing.get_context("spawn")
+        except:
+            ctx = None # Fallback for some environments
         self.executor = ProcessPoolExecutor(max_workers=cfg.tda_workers, mp_context=ctx)
         self.cache = SizedLRUCache(cfg.max_cache_mb)
 
@@ -160,8 +170,11 @@ class HybridTopoManager:
         loop = asyncio.get_running_loop()
         cfg_lite = {'system_dim': self.cfg.system_dim, 'tda_window': self.cfg.tda_window, 'tda_stride': self.cfg.tda_stride}
         
-        with TDA_CALC_TIME.time():
-            tda_dist = await loop.run_in_executor(self.executor, _compute_topology_task, p_bytes, c_bytes, cfg_lite)
+        tda_dist = None
+        # Try TDA only if libs are present
+        if ripser is not None:
+            with TDA_CALC_TIME.time():
+                tda_dist = await loop.run_in_executor(self.executor, _compute_topology_task, p_bytes, c_bytes, cfg_lite)
         
         method = "TDA"
         if tda_dist is not None:
@@ -177,23 +190,20 @@ class HybridTopoManager:
         return result, method
 
 # ------------------------------------------------------------------ #
-#  Optimized Neural Components
+# Neural Components
 # ------------------------------------------------------------------ #
 class SemanticCortex(nn.Module):
     def __init__(self, cfg: ResoneticConfig):
         super().__init__()
-        # [Opt 1] GPU Enabled SBERT
         log.info(f"Loading SBERT on {DEVICE}...")
         self.encoder = SentenceTransformer(cfg.sbert_name, device=str(DEVICE))
         self.projector = nn.Linear(self.encoder.get_sentence_embedding_dimension(), cfg.system_dim).to(DEVICE)
         
     def forward(self, texts: List[str]) -> torch.Tensor:
         with torch.no_grad():
-            # SBERT handles batching internally, usually faster on GPU
             emb = self.encoder.encode(texts, convert_to_tensor=True, device=DEVICE, show_progress_bar=False)
         return F.normalize(self.projector(emb), dim=1)
 
-# ... (TruthFlow & ShockDetector same) ...
 class TruthFlow(nn.Module):
     def __init__(self, cfg: ResoneticConfig):
         super().__init__()
@@ -211,7 +221,9 @@ class ContextAwareShockDetector(nn.Module):
         self.net = nn.Sequential(nn.Linear(cfg.system_dim * 3, 128), nn.ReLU(), nn.Dropout(0.1), nn.Linear(128, 1))
     def forward(self, p, c, b): return torch.sigmoid(self.net(torch.cat([p, c, b], dim=1))).squeeze(-1)
 
-# ... (Step & Result same) ...
+# ------------------------------------------------------------------ #
+# Engine & API
+# ------------------------------------------------------------------ #
 @dataclass
 class Step:
     premise: str; conclusion: str; coherence: float; shock: float; method: str; confidence: float
@@ -231,15 +243,11 @@ class Engine:
 
     async def infer_stream(self, query: str, premises: List[str]) -> AsyncGenerator[Step, None]:
         self.flow.reset()
-        
-        # [Opt 1] Batch Encode initial query
         q_vec = self.cortex([query])
         belief = self.flow(q_vec)
-
-        # [Opt 1] Batch Encode all premises at once (Huge Speedup)
-        # Instead of encoding one by one in loop, encode all first
-        all_texts = premises
-        all_vecs = self.cortex(all_texts) # (N, Dim)
+        
+        # Batch encode
+        all_vecs = self.cortex(premises)
 
         for i in range(len(premises) - 1):
             pv = all_vecs[i:i+1]
@@ -258,7 +266,7 @@ class Engine:
             shock_val = self.shock(pv, cv, belief).item()
             belief = self.flow(cv)
             
-            base_conf = 1.0 if method == "TDA" or method == "CACHE" else 0.5
+            base_conf = 1.0 if method in ["TDA", "CACHE"] else 0.5
             if method == "TIMEOUT": base_conf = 0.1
             confidence = base_conf * coherence
             
@@ -266,11 +274,9 @@ class Engine:
             yield step
             
             if coherence < self.cfg.coherence_min: 
-                yield Step("", "STOPPED: Low Coherence", 0, 0, method, 0)
-                break
+                yield Step("", "STOPPED: Low Coherence", 0, 0, method, 0); break
             if shock_val > self.cfg.shock_threshold:
-                yield Step("", "STOPPED: High Shock", 0, 0, method, 0)
-                break
+                yield Step("", "STOPPED: High Shock", 0, 0, method, 0); break
 
 app = FastAPI(title="Resonetics-v6.1-Perf", version="6.1")
 engine: Optional[Engine] = None
@@ -297,21 +303,16 @@ async def metrics(): return StreamingResponse(generate_latest(), media_type=CONT
 async def infer_stream(req: InferRequest):
     INFERENCE_REQUESTS.inc()
     if not engine: raise HTTPException(503, "Loading...")
-    
     async def event_generator():
         try:
             async for step in engine.infer_stream(req.query, req.premises):
-                # [Opt 2] orjson for super-fast serialization
-                # orjson dumps returns bytes, so we decode to str for SSE
                 yield orjson.dumps(asdict(step)).decode('utf-8') + "\n"
         except Exception as e:
             INFERENCE_ERRORS.inc()
             yield orjson.dumps({"error": str(e)}).decode('utf-8') + "\n"
-
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
 if __name__ == "__main__":
     import uvicorn
-    # GPU present -> workers=1
-    # CPU only -> workers=cores
     w = 1 if torch.cuda.is_available() else 4
+    uvicorn.run(app, host="0.0.0.0", port=8000, workers=w)
