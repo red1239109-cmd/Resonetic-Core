@@ -27,7 +27,7 @@ $$W_\infty(D_1, D_2) = \inf_\gamma \sup_{x \in D_1} \|x - \gamma(x)\|_\infty$$
 * **Distance ≈ 0:** the logical structure is perfectly preserved (resonance).
 * **Distance ≫ 0:** a structural mismatch occurs (dissonance/shock).
 
-## 3. Hybrid Inference Architecture (v6.1)
+## 3. Hybrid Inference Architecture (v6.2)
 
 TDA is cubic in the worst case. We keep it real-time with a three-tier strategy:
 
