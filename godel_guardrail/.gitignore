@@ -1,0 +1,15 @@
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Environment variables (절대 업로드 금지)
+.env
+.env.local
+
+# Audit Logs (개인정보 포함될 수 있으므로 제외)
+godel_audit.jsonl
+godel_audit.jsonl.*
+
+# IDE settings
+.vscode/
+.idea/
