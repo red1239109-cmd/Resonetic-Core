@@ -218,4 +218,186 @@ class SemanticCortex(nn.Module):
     def forward(self, texts: List[str]) -> torch.Tensor:
         with torch.no_grad():
             emb = self.encoder.encode(texts, convert_to_tensor=True, device=DEVICE, show_progress_bar=False)
-        return F.normalize(self.projector(
+        return F.normalize(self.projector(emb), dim=1)
+
+class TruthFlow(nn.Module):
+    def __init__(self, cfg: ResoneticConfig):
+        super().__init__()
+        self.cfg = cfg
+        self.register_buffer("belief", torch.zeros(1, cfg.system_dim))
+        self.eval()
+
+    def reset(self): self.belief.zero_()
+    
+    def forward(self, x):
+        with torch.no_grad():
+            if self.belief.sum() == 0: 
+                self.belief = x.mean(0, keepdim=True).clone()
+            else: 
+                self.belief = self.belief * (1 - self.cfg.flow_rate) + x.mean(0, keepdim=True) * self.cfg.flow_rate
+        return self.belief.clone()
+
+class ContextAwareShockDetector(nn.Module):
+    def __init__(self, cfg: ResoneticConfig):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(cfg.system_dim * 3, 128), 
+            nn.ReLU(), 
+            # [Fix 3] Dropout needs eval() to be deterministic
+            nn.Dropout(0.1), 
+            nn.Linear(128, 1)
+        )
+        self.eval() # Inference only
+        
+    def forward(self, p, c, b): 
+        with torch.no_grad():
+            return torch.sigmoid(self.net(torch.cat([p, c, b], dim=1))).squeeze(-1)
+
+# ------------------------------------------------------------------ #
+# 6. Engine & API
+# ------------------------------------------------------------------ #
+@dataclass
+class Step:
+    premise: str
+    conclusion: str
+    coherence: float
+    shock: float
+    method: str
+    confidence: float
+
+@dataclass
+class Result:
+    query: str
+    steps: List[Step]
+    final_conclusion: Optional[str] = None
+    stopped: str = "OK"
+
+class Engine:
+    def __init__(self):
+        self.cfg = ResoneticConfig()
+        self.topo = HybridTopoManager(self.cfg)
+        self.cortex = SemanticCortex(self.cfg).to(DEVICE)
+        self.flow = TruthFlow(self.cfg).to(DEVICE)
+        self.shock = ContextAwareShockDetector(self.cfg).to(DEVICE)
+        
+        # [Fix 4] Correct nn.Parameter initialization on device
+        self.phase_scale = nn.Parameter(torch.tensor(5.0, device=DEVICE))
+        log.info(f"Engine Ready on {DEVICE}")
+
+    async def infer_stream(self, query: str, premises: List[str]) -> AsyncGenerator[Step, None]:
+        self.flow.reset()
+        
+        # [Fix 7] Global Timeout Wrapper is handled in the API layer, 
+        # but logical checks here ensure we don't process infinite streams.
+        
+        q_vec = self.cortex([query])
+        belief = self.flow(q_vec)
+        all_vecs = self.cortex(premises)
+
+        for i in range(len(premises) - 1):
+            pv = all_vecs[i:i+1]
+            cv = all_vecs[i+1:i+2]
+            
+            # Step-wise adaptive timeout
+            text_len = len(premises[i]) + len(premises[i+1])
+            step_timeout = 1.0 + (text_len / 500.0)
+            
+            try:
+                raw, method = await asyncio.wait_for(self.topo.compute_hybrid(pv, cv), timeout=step_timeout)
+            except asyncio.TimeoutError:
+                raw, method = 2.0, "TIMEOUT"
+                FALLBACK_COUNT.inc()
+
+            coherence = float(torch.sigmoid(-self.phase_scale * (raw - 0.5)).item())
+            shock_val = self.shock(pv, cv, belief).item()
+            belief = self.flow(cv)
+            
+            base_conf = 1.0 if method in ["TDA", "CACHE"] else 0.5
+            if method == "TIMEOUT": base_conf = 0.1
+            confidence = base_conf * coherence
+            
+            step = Step(premises[i], premises[i+1], coherence, shock_val, method, confidence)
+            yield step
+            
+            if coherence < self.cfg.coherence_min: 
+                yield Step("", "STOPPED: Low Coherence", 0.0, 0.0, method, 0.0); break
+            if shock_val > self.cfg.shock_threshold:
+                yield Step("", "STOPPED: High Shock", 0.0, 0.0, method, 0.0); break
+
+# ------------------------------------------------------------------ #
+# 7. FastAPI App
+# ------------------------------------------------------------------ #
+app = FastAPI(title="Resonetics Engine", version="6.2-Gold")
+engine: Optional[Engine] = None
+
+class InferRequest(BaseModel):
+    query: str
+    premises: List[str] = Field(..., max_items=20)
+    
+    @validator('premises')
+    def validate_len(cls, v):
+        if any(len(p) > 1000 for p in v): raise ValueError("Premise too long")
+        return v
+    
+    class Config:
+        schema_extra = {"example": {"query": "Is AI dangerous?", "premises": ["AI learns.", "Data is biased.", "AI is biased."]}}
+
+@app.on_event("startup")
+async def startup():
+    global engine
+    engine = Engine()
+    # [Fix 8] Warm-up SBERT here is handled by __init__ loading the model.
+    # Ideally, we can do a dummy inference here to pre-load CUDA context.
+    try:
+        engine.cortex(["Warm up"])
+    except: pass
+
+@app.on_event("shutdown")
+async def shutdown():
+    # [Fix 2] Graceful Shutdown
+    if engine:
+        engine.topo.close()
+    log.info("Engine shutdown complete.")
+
+@app.get("/metrics")
+async def metrics(): 
+    return StreamingResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+@app.post("/infer_stream")
+async def infer_stream(req: InferRequest):
+    INFERENCE_REQUESTS.inc()
+    if not engine: raise HTTPException(503, "Loading...")
+    
+    async def event_generator():
+        try:
+            # [Fix 7] Global Timeout Enforcement
+            async with asyncio.timeout(engine.cfg.inference_timeout):
+                async for step in engine.infer_stream(req.query, req.premises):
+                    # [Fix 9] Safe Serialization
+                    if HAS_ORJSON:
+                        # orjson returns bytes, need decode
+                        yield orjson.dumps(asdict(step)).decode('utf-8') + "\n"
+                    else:
+                        # json returns str, no decode needed
+                        yield json.dumps(asdict(step)) + "\n"
+        except asyncio.TimeoutError:
+            INFERENCE_ERRORS.inc()
+            # [Fix 10] Return a proper error step that matches schema or specific error JSON
+            err_json = {"error": "Global Timeout Reached"}
+            yield (orjson.dumps(err_json).decode('utf-8') if HAS_ORJSON else json.dumps(err_json)) + "\n"
+        except Exception as e:
+            INFERENCE_ERRORS.inc()
+            log.exception("Inference failed") # [Fix 6] Log full stack trace
+            err_json = {"error": str(e)}
+            yield (orjson.dumps(err_json).decode('utf-8') if HAS_ORJSON else json.dumps(err_json)) + "\n"
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")
+
+if __name__ == "__main__":
+    import uvicorn
+    # Worker Strategy: 
+    # Use workers=1 if GPU is available to prevent VRAM duplication.
+    # Use workers=CORES if CPU only.
+    w = 1 if torch.cuda.is_available() else 4
+    log.info(f"Starting server with {w} workers...")
+    uvicorn.run(app, host="0.0.0.0", port=8000, workers=w)
