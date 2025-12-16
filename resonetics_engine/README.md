@@ -1,4 +1,4 @@
-# 🧠 Resonetics Engine: Performance Edition (v6.1)
+# 🧠 Resonetics Engine: Performance Edition (v6.2)
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green)](https://www.python.org/)
