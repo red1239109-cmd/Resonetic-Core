@@ -59,3 +59,46 @@ graph TD
     Tension --> Governor
     Threshold -- Continue --> Physics
     Threshold -- Stop --> Result[Final Decision]
+
+Usage Example
+
+import asyncio
+from src.engine import ResoneticEngineV3, Option, Evidence, Criterion
+
+async def main():
+    engine = ResoneticEngineV3()
+    
+    question = "Choose a backend framework for a fintech startup."
+    
+    options = [
+        Option("A", "Django", "Battery-included, mature ecosystem"),
+        Option("B", "FastAPI", "Modern, high-performance async"),
+    ]
+    
+    evidence = [
+        Evidence("A", "Proven stability in banking sectors for 10+ years", 1.0),
+        Evidence("A", "Slightly slower performance compared to Go/Rust", -0.3),
+        Evidence("B", "Type hints prevent many logical errors", 1.0),
+        Evidence("B", "Newer ecosystem implies potential hidden risks", -0.5),
+    ]
+    
+    # Run Decision
+    result = await engine.decide(question, options, evidence)
+    
+    print(f"🏆 Winner: {result.chosen} (Conf: {result.confidence:.3f})")
+    print(f"📉 Tension: {result.steps[-1].metrics['tension']:.3f}")
+    print(f"💡 Reason: {result.reason}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+    🧮 Mathematical Integrity
+
+    Tension Variance CorrectionIn v3.5.1, we corrected the variance normalization factor.For three values $\{a, b, c\} \in [0, 1]$, the theoretical maximum population variance occurs at the extremes (e.g., $\{0, 0, 1\}$).$$ \text{Max Variance} = \frac{(0 - 1/3)^2 + (0 - 1/3)^2 + (1 - 1/3)^2}{3} = \frac{2}{9} \approx 0.222 $$Previous heuristics used $1/6$, which led to overflow in extreme polarization. Resonetics now strictly adheres to this bound.
+
+    🗺️ Roadmap
+v4.0: Integration with LLM agents for automated evidence gathering.
+
+v4.1: Multi-agent debate simulation (Arena Mode).
+
+Dashboard: Web-based UI using Streamlit for real-time visualization of the "Resonance Loop".
