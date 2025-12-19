@@ -22,8 +22,8 @@
 <img width="1844" height="2105" alt="6acabf34-6f41-4f74-a06c-d5c0c97fd468" src="https://github.com/user-attachments/assets/a3d85d79-48e1-43b5-bbfd-07bd97ead6f9" />
 
 ### Postmortem Report
-![Postmortem](https://imgix.datadoghq.com/img/blog/incident-postmortem-process-best-practices/postmortem-best-practices-clipboard.png)
-<img width="1506" height="1841" alt="fbb0f845-f68e-475e-a4c3-0e3149070b54" src="https://github.com/user-attachments/assets/b5a99b3d-3024-43da-8e6c-54421205efed" />
+![Postmortem](https://via.placeholder.com/800x500?text=Automated+Postmortem+with+Verdict)
+<img width="1506" height="1841" alt="fbb0f845-f68e-475e-a4c3-0e3149070b54" src="https://github.com/user-attachments/assets/9c99e82c-341f-4c00-a9ff-4edd5dc5e7ac" />
 
 ## Quick Start
 ```bash
