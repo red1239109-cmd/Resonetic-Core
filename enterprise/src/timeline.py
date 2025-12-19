@@ -1,28 +1,18 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2025 red1239109-cmd
-from __future__ import annotations
-from dataclasses import dataclass, asdict, field
 import json
 import os
-from collections import deque
-from typing import Any, Dict, List, Optional
 import uuid
-import time
-
-def now_ts() -> float:
-    return float(time.time())
-
-def fmt_ts(ts: float) -> str:
-    try:
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
-    except Exception:
-        return str(ts)
+from dataclasses import dataclass, field, asdict
+from typing import Any, Dict, List, Optional
+from collections import deque
+from . import now_ts
 
 @dataclass
 class TimelineEvent:
     ts: float
     step: int
-    kind: str          # anomaly, action_apply, action_effect, resolve, postmortem
+    kind: str          # anomaly, action_apply, action_vetoed, action_effect, resolve, postmortem
     severity: str      # info, warn, high
     title: str
     detail: Dict[str, Any] = field(default_factory=dict)
