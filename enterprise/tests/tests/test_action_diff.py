@@ -20,7 +20,7 @@ class TestActionDiff(unittest.TestCase):
         self.state = {"learning_rate": 0.005, "reality_weight": 1.0, "dropout": 0.1}
 
     def test_constitutional_action(self):
-        # 합헌적인 변경
+        # Constitutional change (Valid)
         plan = ActionPlan("act_1", "inc_1", "Safe Change", {"dropout": 0.5})
         success = self.applicator.apply(
             plan, 
@@ -32,7 +32,7 @@ class TestActionDiff(unittest.TestCase):
         self.assertEqual(self.state["dropout"], 0.5)
 
     def test_unconstitutional_action(self):
-        # 위헌적인 변경 (LR > 0.01)
+        # Unconstitutional change (LR > 0.01)
         plan = ActionPlan("act_2", "inc_1", "Dangerous Change", {"learning_rate": 0.05})
         success = self.applicator.apply(
             plan, 
@@ -41,7 +41,7 @@ class TestActionDiff(unittest.TestCase):
             step=2
         )
         self.assertFalse(success)
-        self.assertEqual(self.state["learning_rate"], 0.005) # 변경되면 안됨
+        self.assertEqual(self.state["learning_rate"], 0.005) # Should remain unchanged
 
     def tearDown(self):
         if os.path.exists("runs/test_timeline.jsonl"):
