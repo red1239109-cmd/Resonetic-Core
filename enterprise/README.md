@@ -21,9 +21,6 @@
 ![Timeline Veto](https://via.placeholder.com/800x600?text=Kant+and+Rawls+Veto+Events)
 <img width="1844" height="2105" alt="6acabf34-6f41-4f74-a06c-d5c0c97fd468" src="https://github.com/user-attachments/assets/a3d85d79-48e1-43b5-bbfd-07bd97ead6f9" />
 
-### Postmortem Report
-![<img width="1506" height="1841" alt="fbb0f845-f68e-475e-a4c3-0e3149070b54" src="https://github.com/user-attachments/assets/8b944652-79aa-4767-ad23-617c1f8a28ba" />
-Postmortem](https://via.placeholder.com/800x500?text=Automated+Postmortem+with+Verdict)
 
 ## Quick Start
 ```bash
