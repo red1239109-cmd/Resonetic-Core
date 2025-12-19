@@ -14,3 +14,6 @@
 ```bash
 pip install -r requirements.txt
 python scripts/demo_simulation.py
+
+Core Concept
+Every action is recorded, validated, and auditable by default.
