@@ -17,3 +17,7 @@ python scripts/demo_simulation.py
 
 Core Concept
 Every action is recorded, validated, and auditable by default.
+
+## License
+This project is dual-licensed under AGPL-3.0 or Commercial.  
+See [LICENSING.md](LICENSING.md) for details.
