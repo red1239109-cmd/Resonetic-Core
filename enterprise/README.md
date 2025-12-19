@@ -1,1 +1,16 @@
+# Enterprise AI Operation System
 
+**Explainability-first incident management for AI/ML systems.**
+
+## Structure
+- `src/`: Pure operation logic (holy ground)
+- `dashboard/`: Human-readable views
+- `runs/`: Audit trail (DO NOT GITIGNORE)
+- `scripts/`: Simulations & tooling
+- `docs/`: Architecture decisions
+- `tests/`: Critical path coverage
+
+## Quick Start
+```bash
+pip install -r requirements.txt
+python scripts/demo_simulation.py
