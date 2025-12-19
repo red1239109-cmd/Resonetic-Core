@@ -4,7 +4,7 @@ import unittest
 import sys
 import os
 
-# src 모듈을 찾기 위한 경로 설정
+# Set path to locate the 'src' module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.incident import IncidentRegistry
