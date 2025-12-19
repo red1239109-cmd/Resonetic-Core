@@ -19,7 +19,7 @@ class TestStability(unittest.TestCase):
     def test_stability_score_increase(self):
         inc = self.registry.create_or_update(title="Stability Test", severity="warn")
         
-        # 안정적인 상태(0.9)를 5번 주입
+        # Inject stable state (0.9) 5 times
         for i in range(5):
             self.tracker.observe(inc.incident_id, step=i, stability=0.9, signal={})
         
@@ -28,7 +28,7 @@ class TestStability(unittest.TestCase):
         self.assertEqual(updated.stability_score, 0.5) # 5/10 steps
 
     def tearDown(self):
-        # 테스트용 파일 삭제
+        # Clean up temporary test file
         if os.path.exists("runs/test_timeline.jsonl"):
             os.remove("runs/test_timeline.jsonl")
 
