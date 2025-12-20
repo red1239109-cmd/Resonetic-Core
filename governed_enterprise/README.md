@@ -1,9 +1,13 @@
-
 <div align="center">
 
 ![docker](https://img.shields.io/badge/🐳%20Docker-Ready-2496ED?style=for-the-badge&logo=docker)
 ![clones](https://img.shields.io/badge/📦%20Active_Clones-2k%2B-blue?style=for-the-badge&logo=git)
 ![status](https://img.shields.io/badge/🛡️%20Security-Hardened-success?style=for-the-badge&logo=security)
+
+![Screenshot 2025-12-20 at 21 14 43](https://github.com/user-attachments/assets/a539a33b-cd3a-4289-aa83-b2a6697bb2e1)
+
+![Screenshot 2025-12-20 at 21 15 01](https://github.com/user-attachments/assets/1aaedd47-8bf6-467a-9c9d-1b7545525605)
+
 
 # 🧠 GDR-Core
 ### (Governed Data Refinery)
