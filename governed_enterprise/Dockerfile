@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 8080
 
 # Run pre-flight check, then start main engine
-CMD python scripts/check_env.py && python gdr_v2_1.py
+CMD python scripts/check_env.py && python gdr.py
