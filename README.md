@@ -21,6 +21,16 @@ This project has:
 *(Actual traffic insights from Dec 6 - Dec 20)*
 <img width="680" height="832" alt="image" src="https://github.com/user-attachments/assets/a4f10ab4-970c-4fcd-8ecc-4fb268a24f20" />
 
+---
+
+### 🚧 Current Status: v0.x (Early Access)
+
+We are evolving rapidly. **Your feedback fuels this engine.**
+
+**🚀 Upcoming Roadmap:**
+- ⚡ **Performance:** Polars Optimization (In Progress)
+- 🐳 **Deployment:** Docker Support
+- 🛡️ **Stability:** Comprehensive Tests
 ---# Resonetics
 
 ## What is Resonetics?
