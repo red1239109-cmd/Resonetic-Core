@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2025 red1239109-cmd
-#!/usr/bin/env python3
 # ==============================================================================
 # File: check_env.py
 # Description: Pre-flight checklist for GDR System
