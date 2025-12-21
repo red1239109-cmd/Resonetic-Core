@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
 # File: resonetics_engine_v6_2.py
 # Project: Resonetics (Reasoning Engine)
 # Version: 6.2 (Final Gold - Stability Patched)
 # Author: red1239109-cmd
-# Copyright (c) 2025 Resonetics Project
-# License: AGPL-3.0
 # ==============================================================================
 
 from __future__ import annotations
