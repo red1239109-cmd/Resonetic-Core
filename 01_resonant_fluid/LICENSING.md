@@ -1,1 +1,2 @@
-AGPL-3.0. See LICENSE.
+## License
+Apache License 2.0
