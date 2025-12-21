@@ -155,17 +155,7 @@ See `KNOWN_ISSUES.md` for full details.
 
 ## License
 
-### Dual License Model
-
-**1. Open Source (AGPL-3.0)**
-
-* Free for research, education, and open projects
-* Derivative works must also be open-sourced under AGPL-3.0
-
-**2. Commercial License**
-
-* For proprietary or closed-source use
-* Contact: **[red1239109@gmail.com](mailto:red1239109@gmail.com)**
+Apache License 2.0
 
 ---
 
