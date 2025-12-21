@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 import numpy as np
 from adaptive_filter import adaptive_anomaly_detection
 
