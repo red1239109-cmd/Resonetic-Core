@@ -1,12 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
 # File: resonetics_k8s_v4_6_hardened.py
 # Version: 4.6 (Reviewer-Hardened K8s Env)
 # Description: RL environment for Kubernetes-style resource management with
 #              improved termination logic, reward shaping, and Gymnasium-compliant rendering.
 # Author: red1239109-cmd
-# Copyright (c) 2025 Resonetics Project
-#
-# License: AGPL-3.0
 # ==============================================================================
 
 from __future__ import annotations
