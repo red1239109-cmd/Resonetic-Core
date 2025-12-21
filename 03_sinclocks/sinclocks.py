@@ -1,5 +1,5 @@
-# Copyright (c) 2025 red1239109-cmd
-# Licensed under AGPL-3.0. See LICENSE file for details.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 
 import torch
 import torch.nn as nn
