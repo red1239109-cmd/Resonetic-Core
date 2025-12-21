@@ -1,9 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
 # File: ethervae_benchmark_v6_logging.py
 # Version: 6.0 (Baselines + Reproducible Experiment Logs)
 # Description: EtherVAE benchmark with baselines and reviewer-friendly logging.
 # Author: Resonetics Lab
-# License: AGPL-3.0
 # ==============================================================================
 
 from __future__ import annotations
