@@ -1,0 +1,10 @@
+# Core dependencies (필수)
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+
+# Optional: Flask dashboard (대시보드 사용 시 설치)
+Flask>=2.3
+
+# Development / Testing (pytest 실행 시 필요)
+pytest>=7.0
