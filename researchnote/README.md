@@ -182,9 +182,7 @@ Resonetics asks:
 
 ## License
 
-AGPL-3.0  
-Dual-license possible for commercial use.  
-See headers in individual files for details.
+Apache License 2.0
 
 ---
 
