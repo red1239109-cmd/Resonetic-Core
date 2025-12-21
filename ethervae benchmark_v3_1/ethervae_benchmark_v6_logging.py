@@ -4,7 +4,7 @@
 # File: ethervae_benchmark_v6_logging.py
 # Version: 6.0 (Baselines + Reproducible Experiment Logs)
 # Description: EtherVAE benchmark with baselines and reviewer-friendly logging.
-# Author: Resonetics Lab
+# Author: red1239109-cmd
 # ==============================================================================
 
 from __future__ import annotations
