@@ -1,11 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
 # File: resonetics_v3_3_2_final_with_patches.py
 # Project: Resonetics (The Entropy Gardener)
 # Version: 3.3.2 (Robustness Patch) + Metrics Patch + Risk/Verdict Patch
 # Author: red1239109-cmd
-# Copyright (c) 2025 Resonetics Project
-#
-# License: AGPL-3.0
 # ==============================================================================
 import torch
 import torch.nn as nn
