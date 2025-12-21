@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
 # File: ethervae_benchmark_v5_baselines.py
 # Version: 5.0 (Baselines + Tradeoffs)
@@ -6,22 +8,6 @@
 #     - Reconstruction vs KL tradeoff (ELBO components)
 #     - Smoothness (local latent perturbation stability)
 #     - Entropy-response curves for Ether / Resonetics inference modes
-#
-# Author: Resonetics Lab
-# License: AGPL-3.0
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # ==============================================================================
 
 from __future__ import annotations
