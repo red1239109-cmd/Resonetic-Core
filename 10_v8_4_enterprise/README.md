@@ -72,19 +72,8 @@ These principles are realized in different forms across numerical models (tensor
 | EXPERIMENT_LOG_EXAMPLE.md | Guide to reading experiment logs             |
 
 ### License
-**Dual License Model**
 
-**Open Source**  
-- AGPL-3.0  
-- Source code must be disclosed when used over a network
-
-**Commercial License**  
-- Available for proprietary use  
-- Terms negotiated based on organization size and usage scope
-
-📧 Contact: red1239109@gmail.com
-
-### What Resonetics Is Not
+Apache License 2.0
 
 - A claim of universal AGI ❌  
 - A black-box “self-aware” model ❌  
