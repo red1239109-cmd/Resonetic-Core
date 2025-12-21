@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
 # File: resonetics_via_negativa_runtime_controls_v1_1.py
 # Project: Resonetics (Via Negativa)
 # Version: 1.1 (Runtime Controls - Safety Patch)
 # Author: red1239109-cmd
 # Copyright (c) 2025 Resonetics Project
-#
-# License: AGPL-3.0
 # ==============================================================================
 """
 Resonetics Via Negativa - Runtime Controls v1.1
