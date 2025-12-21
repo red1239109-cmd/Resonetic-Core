@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
 # File: resonetics_prophet_v8_5_0_enterprise_kernel_auto.py
 # Project: Resonetics (The Prophet) - Enterprise Edition (Auto-Tuning Kernel)
 # Version: 8.5.0 (Kernel PID Auto-Tuning Integrated)
-# Author: red1239109-cmd
-# License: AGPL-3.0
 #
 # Enhanced Features:
 #   1. Enterprise-grade monitoring (Prometheus/Flask)
