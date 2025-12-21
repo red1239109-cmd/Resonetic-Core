@@ -1,1 +1,639 @@
-
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0-or-later
+# Copyright (C) 2025 red1239109-cmd
+# ==============================================================================
+# File: dre_v1_11_2_single_trunk.py
+# Product: Data Refinery Engine (DRE) v1.11.2 - Single Trunk
+# 
+# Goals:
+# - One file. One truth. No drift.
+# - Pytest-friendly: TimelineStore() works without args
+# - Includes DAGRunner/DAGNode + governance + explain + fairness + effect
+# - Optional extras are isolated (no hard dependency on flask/polars/graphviz)
+# 
+# Expected pytest imports:
+# from dre_v1_11_2_single_trunk import (
+# DataRefineryEngine, AlwaysWinnerDetector, ActionEffectAnalyzer,
+# TimelineStore, DAGRunner, DAGNode
+# )
+# ==============================================================================
+from **future** import annotations
+import json
+import time
+import uuid
+import traceback
+from dataclasses import dataclass, asdict, field
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections import deque
+import numpy as np
+import pandas as pd
+from scipy.stats import entropy
+# ==============================================================================
+# 0) Utilities
+# ==============================================================================
+def now_ts() -> float:
+    return float(time.time())
+def fmt_ts(ts: float) -> str:
+    try:
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(ts)))
+    except Exception:
+        return str(ts)
+def ensure_dir(file_path: str) -> None:
+    Path(file_path).parent.mkdir(parents=True, exist_ok=True)
+def safe_json_dump(obj: Any) -> str:
+    try:
+        return json.dumps(obj, ensure_ascii=False, indent=2, default=str)
+    except Exception:
+        return json.dumps({"error": "json_dump_failed", "type": str(type(obj))}, ensure_ascii=False, indent=2)
+# ==============================================================================
+# 1) Explain Cards
+# ==============================================================================
+@dataclass
+class ExplainCard:
+    decision: str
+    headline: str
+    evidence: List[str]
+    scores: Dict[str, Any]
+    threshold: float
+    reason: str
+    column: str
+    batch_id: str
+class ExplainCardBuilder:
+    def build(
+        self,
+        batch_id: str,
+        column: str,
+        decision: str,
+        scores: Dict[str, Any],
+        threshold: float,
+        reason: str = "score_based"
+    ) -> ExplainCard:
+        gold = float(scores.get("gold_score", 0.0))
+        rel = float(scores.get("relevance", 0.0))
+        qual = float(scores.get("quality", 0.0))
+        if decision == "KEEP":
+            headline = f"'{column}' 유지: gold_score({gold:.3f}) ≥ 임계값({threshold:.3f})"
+        else:
+            headline = f"'{column}' 제거: gold_score({gold:.3f}) < 임계값({threshold:.3f})"
+        evidence = [
+            f"Gold Score: {gold:.3f} vs Threshold: {threshold:.3f}",
+            f"Relevance: {rel:.3f} | Quality: {qual:.3f}",
+            f"Reason: {reason.replace('_', ' ').title()}",
+        ]
+        return ExplainCard(
+            decision=decision,
+            headline=headline,
+            evidence=evidence,
+            scores=scores,
+            threshold=float(threshold),
+            reason=reason,
+            column=column,
+            batch_id=batch_id,
+        )
+# ==============================================================================
+# 2) Timeline (Audit Trail) - pytest-friendly default path
+# ==============================================================================
+@dataclass
+class TimelineEvent:
+    ts: float
+    step: int
+    kind: str
+    severity: str
+    title: str
+    detail: Dict[str, Any] = field(default_factory=dict)
+    incident_id: Optional[str] = None
+    tags: List[str] = field(default_factory=list)
+class TimelineStore:
+    """
+    IMPORTANT: Must work as TimelineStore() with no args (pytest).
+    """
+    def **init**(self, path: str = "runs/timeline.jsonl", maxlen: int = 5000):
+        self.path = str(path)
+        self.buf = deque(maxlen=int(maxlen))
+        ensure_dir(self.path)
+    def add(self, ev: TimelineEvent) -> str:
+        payload = asdict(ev)
+        self.buf.append(payload)
+        try:
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+        except Exception:
+            pass
+        return "evt_" + str(uuid.uuid4())[:8]
+    def list_recent(self, limit: int = 200) -> List[Dict[str, Any]]:
+        return list(self.buf)[-int(limit):]
+# ==============================================================================
+# 3) Queue Store (minimal; not required by pytest, but useful)
+# ==============================================================================
+@dataclass
+class QueueItem:
+    ts: float
+    batch_id: str
+    status: str # RUNNING | OK | FAIL
+    input_rows: int = 0
+    input_cols: int = 0
+    kept_cols: int = 0
+    dropped_cols: int = 0
+    threshold: Optional[float] = None
+    error: Optional[str] = None
+    meta: Dict[str, Any] = field(default_factory=dict)
+class QueueStore:
+    def **init**(self, path: str = "runs/queue.jsonl"):
+        self.path = str(path)
+        ensure_dir(self.path)
+    def append(self, item: QueueItem) -> None:
+        payload = asdict(item)
+        try:
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
+        except Exception:
+            pass
+# ==============================================================================
+# 4) PID Threshold Controller
+# ==============================================================================
+class PIDController:
+    def **init**(self, kp: float = 0.25, ki: float = 0.05):
+        self.kp = float(kp)
+        self.ki = float(ki)
+        self.integral = 0.0
+    def step(self, error: float) -> float:
+        self.integral = float(np.clip(self.integral + float(error), -1.0, 1.0))
+        return (self.kp * float(error)) + (self.ki * self.integral)
+# ==============================================================================
+# 5) Systemic Fairness: Always-Winner Detector (pytest target)
+# ==============================================================================
+def pick_winner_by_delta(delta: Dict[str, float]) -> Tuple[str, Dict[str, float]]:
+    benefit = {
+        "risk": -float(delta.get("risk", 0.0)),
+        "loss": -float(delta.get("loss", 0.0)),
+        "stability": float(delta.get("stability", 0.0)),
+    }
+    winner = max(benefit.items(), key=lambda x: x[1])[0]
+    return winner, benefit
+class AlwaysWinnerDetector:
+    def **init**(self, timeline: TimelineStore, window: int = 30, streak_trigger: int = 3):
+        self.timeline = timeline
+        self.window = int(window)
+        self.streak_trigger = int(streak_trigger)
+        self.history = deque(maxlen=self.window)
+        self.current_winner: Optional[str] = None
+        self.streak = 0
+    def observe(self, step: int, batch_id: str, winner: str, scores: Dict[str, float]):
+        self.history.append(winner)
+        if self.current_winner == winner:
+            self.streak += 1
+        else:
+            self.current_winner = winner
+            self.streak = 1
+        if len(self.history) < max(5, self.window // 3):
+            return
+        counts: Dict[str, int] = {}
+        for w in self.history:
+            counts[w] = counts.get(w, 0) + 1
+        top, cnt = max(counts.items(), key=lambda x: x[1])
+        concentration = cnt / max(1, len(self.history))
+        if concentration >= 0.70 and self.streak >= self.streak_trigger:
+            self.timeline.add(TimelineEvent(
+                ts=now_ts(),
+                step=int(step),
+                kind="systemic_unfairness",
+                severity="warn",
+                title=f"Systemic Bias Detected: '{top}' dominates",
+                incident_id=batch_id,
+                tags=["fairness", "always_winner"],
+                detail={
+                    "dominant": top,
+                    "concentration": round(float(concentration), 3),
+                    "streak": int(self.streak),
+                    "window": int(len(self.history)),
+                    "scores": scores
+                }
+            ))
+# ==============================================================================
+# 6) Action Effect Analyzer (pytest target)
+# ==============================================================================
+class ActionEffectAnalyzer:
+    def **init**(self, timeline: TimelineStore, window_steps: int = 1, always_winner: Optional[AlwaysWinnerDetector] = None):
+        self.timeline = timeline
+        self.window_steps = int(window_steps)
+        self.buffers: Dict[str, Dict[str, Any]] = {}
+        self.always_winner = always_winner
+    def start(self, batch_id: str, step: int, baseline_metrics: Dict[str, float]) -> None:
+        self.buffers[batch_id] = {
+            "batch_id": batch_id,
+            "start_step": int(step),
+            "baseline": dict(baseline_metrics or {}),
+            "samples": deque(maxlen=max(1, self.window_steps)),
+        }
+    def collect(self, batch_id: str, metrics: Dict[str, float]) -> None:
+        if batch_id not in self.buffers:
+            return
+        buf = self.buffers[batch_id]
+        buf["samples"].append(dict(metrics or {}))
+        if len(buf["samples"]) >= buf["samples"].maxlen:
+            self.finalize(batch_id, step=buf["start_step"] + len(buf["samples"]))
+    def finalize(self, batch_id: str, step: int) -> Optional[Dict[str, Any]]:
+        buf = self.buffers.pop(batch_id, None)
+        if not buf:
+            return None
+        samples = list(buf["samples"])
+        if not samples:
+            return None
+        baseline = buf["baseline"]
+        def avg(key: str) -> Optional[float]:
+            vals = [s.get(key) for s in samples if isinstance(s.get(key), (int, float, np.floating))]
+            return float(np.mean(vals)) if vals else None
+        after = {k: avg(k) for k in ["risk", "loss", "stability"]}
+        delta: Dict[str, float] = {}
+        for k, v_after in after.items():
+            v_base = baseline.get(k)
+            if isinstance(v_after, (int, float)) and isinstance(v_base, (int, float)):
+                delta[k] = float(v_after - v_base)
+        winner, scores = pick_winner_by_delta(delta)
+        if self.always_winner:
+            self.always_winner.observe(step=int(step), batch_id=batch_id, winner=winner, scores=scores)
+        score = 0.0
+        score += (-delta.get("risk", 0.0)) * 1.0
+        score += (-delta.get("loss", 0.0)) * 0.5
+        score += (delta.get("stability", 0.0)) * 1.0
+        verdict = "ineffective"
+        if score > 0.10:
+            verdict = "effective"
+        elif score > 0.02:
+            verdict = "partial"
+        ev_detail = {
+            "baseline": baseline,
+            "after_avg": after,
+            "delta": delta,
+            "score": float(score),
+            "verdict": verdict,
+            "winner": winner,
+            "winner_scores": scores,
+        }
+        self.timeline.add(TimelineEvent(
+            ts=now_ts(),
+            step=int(step),
+            kind="action_effect",
+            severity="info" if verdict == "effective" else "warn",
+            title=f"Batch Effect: {verdict.upper()} (score={score:.3f})",
+            incident_id=batch_id,
+            tags=["effect", verdict, winner],
+            detail=ev_detail
+        ))
+        return ev_detail
+# ==============================================================================
+# 7) DAG Runner (pytest target) + DOT export
+# ==============================================================================
+@dataclass
+class DAGNode:
+    node_id: str
+    title: str
+    fn: Callable[[Any, Dict[str, Any]], Any]
+    deps: List[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+class DAGRunner:
+    """
+    Minimal deterministic DAG runner.
+    - add(node)
+    - run(input_data) -> dict(node_id -> output)
+    Enforces dependency order via Kahn topological sort.
+    """
+    def **init**(self, timeline: Optional[TimelineStore] = None, queue: Any = None):
+        self.timeline = timeline or TimelineStore()
+        self.queue = queue # not used, kept for compatibility
+        self.nodes: Dict[str, DAGNode] = {}
+    def add(self, node: DAGNode) -> None:
+        if not node.node_id or not isinstance(node.node_id, str):
+            raise ValueError("DAGNode.node_id must be a non-empty string")
+        if node.node_id in self.nodes:
+            raise ValueError(f"Duplicate DAG node_id: {node.node_id}")
+        self.nodes[node.node_id] = node
+    def _toposort(self) -> List[str]:
+        # Build graph
+        indeg: Dict[str, int] = {k: 0 for k in self.nodes}
+        outs: Dict[str, List[str]] = {k: [] for k in self.nodes}
+        for nid, n in self.nodes.items():
+            for d in (n.deps or []):
+                if d not in self.nodes:
+                    raise ValueError(f"Missing dependency '{d}' for node '{nid}'")
+                outs[d].append(nid)
+                indeg[nid] += 1
+        q = deque([k for k, v in indeg.items() if v == 0])
+        order: List[str] = []
+        while q:
+            cur = q.popleft()
+            order.append(cur)
+            for nxt in outs[cur]:
+                indeg[nxt] -= 1
+                if indeg[nxt] == 0:
+                    q.append(nxt)
+        if len(order) != len(self.nodes):
+            # cycle
+            raise ValueError("DAG has a cycle (dependency loop detected)")
+        return order
+    def run(self, input_data: Any) -> Dict[str, Any]:
+        order = self._toposort()
+        outputs: Dict[str, Any] = {}
+        step = 0
+        for nid in order:
+            step += 1
+            node = self.nodes[nid]
+            deps_out = {d: outputs[d] for d in (node.deps or [])}
+            self.timeline.add(TimelineEvent(
+                ts=now_ts(),
+                step=step,
+                kind="dag_node_start",
+                severity="info",
+                title=f"DAG node start: {nid}",
+                incident_id=nid,
+                tags=["dag"] + (node.tags or []),
+                detail={"deps": list(node.deps or [])}
+            ))
+            try:
+                out = node.fn(input_data, deps_out)
+                outputs[nid] = out
+                self.timeline.add(TimelineEvent(
+                    ts=now_ts(),
+                    step=step,
+                    kind="dag_node_done",
+                    severity="info",
+                    title=f"DAG node done: {nid}",
+                    incident_id=nid,
+                    tags=["dag"] + (node.tags or []),
+                    detail={"ok": True}
+                ))
+            except Exception as e:
+                tb = traceback.format_exc(limit=5)
+                self.timeline.add(TimelineEvent(
+                    ts=now_ts(),
+                    step=step,
+                    kind="dag_node_error",
+                    severity="high",
+                    title=f"DAG node error: {nid}",
+                    incident_id=nid,
+                    tags=["dag", "error"] + (node.tags or []),
+                    detail={"error": str(e), "trace": tb}
+                ))
+                raise
+        return outputs
+    def dag_to_dot(self, title: str = "DAG") -> str:
+        """
+        DOT string (Graphviz). graphviz 설치 없어도 문자열은 만들 수 있음.
+        """
+        lines = ["digraph DRE_DAG {", ' rankdir="LR";', f' label="{title}";', ' labelloc="t";', " node [shape=box];"]
+        for nid, node in self.nodes.items():
+            safe_title = (node.title or nid).replace('"', "'")
+            lines.append(f' "{nid}" [label="{safe_title}\n({nid})"];')
+        for nid, node in self.nodes.items():
+            for d in (node.deps or []):
+                lines.append(f' "{d}" -> "{nid}";')
+        lines.append("}")
+        return "\n".join(lines)
+# ==============================================================================
+# 8) Data Refinery Engine (pytest target: threshold bounds + explain cards)
+# ==============================================================================
+class DataRefineryEngine:
+    def **init**(
+        self,
+        target_kpi: Optional[str] = None,
+        base_threshold: float = 0.45,
+        target_retention: float = 0.30,
+        timeline_path: str = "runs/timeline.jsonl",
+        audit_path: str = "runs/audit.jsonl",
+        queue_path: str = "runs/queue.jsonl",
+        # perf safety
+        entropy_sample_n: int = 10_000,
+        high_cardinality_ratio: float = 0.80,
+    ):
+        self.target_kpi = target_kpi
+        self.threshold = float(base_threshold)
+        self.target_retention = float(target_retention)
+        # hard governance bounds (pytest expects)
+        self.MIN_THR = 0.10
+        self.MAX_THR = 0.90
+        self.timeline = TimelineStore(timeline_path)
+        self.queue = QueueStore(queue_path)
+        self.audit_path = str(audit_path)
+        ensure_dir(self.audit_path)
+        self.pid = PIDController()
+        self.explain_builder = ExplainCardBuilder()
+        self.explain_cards: Dict[str, List[ExplainCard]] = {}
+        self.always = AlwaysWinnerDetector(self.timeline, window=20, streak_trigger=3)
+        self.effect = ActionEffectAnalyzer(self.timeline, window_steps=1, always_winner=self.always)
+        self.entropy_sample_n = int(entropy_sample_n)
+        self.high_cardinality_ratio = float(high_cardinality_ratio)
+        self._step = 0
+    def *new_batch_id(self) -> str:
+        return "batch*" + str(uuid.uuid4())[:10]
+    def _log_audit(self, record: Dict[str, Any]) -> None:
+        try:
+            with open(self.audit_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+        except Exception:
+            pass
+    def _column_quality_score(self, s: pd.Series) -> float:
+        n = len(s)
+        if n <= 0:
+            return 0.0
+        non_null = float(s.notna().mean())
+        try:
+            nunique = float(s.nunique(dropna=True))
+        except Exception:
+            nunique = float(n)
+        uniq_ratio = nunique / max(1.0, float(n))
+        penalty = float(np.clip(uniq_ratio, 0.0, 1.0))
+        quality = 0.65 * non_null + 0.35 * (1.0 - penalty)
+        return float(np.clip(quality, 0.0, 1.0))
+    def _column_relevance_score(self, s: pd.Series) -> float:
+        n = len(s)
+        if n <= 0:
+            return 0.0
+        # high-card guard (ID류 폭발 방지)
+        try:
+            nunique = float(s.nunique(dropna=True))
+        except Exception:
+            nunique = float(n)
+        if (nunique / max(1.0, float(n))) > self.high_cardinality_ratio:
+            return 0.0
+        # sampling for large columns
+        if n > self.entropy_sample_n:
+            try:
+                s = s.sample(n=min(self.entropy_sample_n, n), random_state=42)
+            except Exception:
+                pass
+        try:
+            vc = s.value_counts(dropna=True, normalize=True)
+            ent = float(entropy(vc)) if len(vc) > 1 else 0.0
+            return float(np.clip(np.tanh(ent), 0.0, 1.0))
+        except Exception:
+            return 0.0
+    def refine(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, Any], List[ExplainCard]]:
+        self._step += 1
+        batch_id = self._new_batch_id()
+        # Queue: RUNNING
+        self.queue.append(QueueItem(
+            ts=now_ts(),
+            batch_id=batch_id,
+            status="RUNNING",
+            input_rows=int(len(df)) if df is not None else 0,
+            input_cols=int(len(df.columns)) if hasattr(df, "columns") else 0,
+            meta={"target_kpi": self.target_kpi or ""}
+        ))
+        self.timeline.add(TimelineEvent(
+            ts=now_ts(),
+            step=self._step,
+            kind="batch_start",
+            severity="info",
+            title=f"Batch Started: {batch_id}",
+            incident_id=batch_id,
+            tags=["batch"],
+            detail={"rows": int(len(df)), "cols": int(len(df.columns))}
+        ))
+        try:
+            baseline_metrics = {
+                "risk": float(np.clip(1.0 - self.threshold, 0.0, 1.0)),
+                "loss": float(np.clip(1.5 - self.threshold, 0.0, 5.0)),
+                "stability": float(np.clip(self.threshold, 0.0, 1.0)),
+            }
+            self.effect.start(batch_id=batch_id, step=self._step, baseline_metrics=baseline_metrics)
+            kept_cols: List[str] = []
+            dropped_cols: List[str] = []
+            cards: List[ExplainCard] = []
+            # KPI column pinned
+            if self.target_kpi and self.target_kpi in df.columns:
+                kept_cols.append(self.target_kpi)
+            for col in df.columns:
+                if col == self.target_kpi:
+                    continue
+                s = df[col]
+                qual = self._column_quality_score(s)
+                rel = self._column_relevance_score(s)
+                gold = 0.5 * rel + 0.5 * qual
+                decision = "KEEP" if gold >= self.threshold else "DROP"
+                scores = {"quality": float(qual), "relevance": float(rel), "gold_score": float(gold)}
+                if decision == "KEEP":
+                    kept_cols.append(col)
+                else:
+                    dropped_cols.append(col)
+                cards.append(self.explain_builder.build(
+                    batch_id=batch_id,
+                    column=col,
+                    decision=decision,
+                    scores=scores,
+                    threshold=self.threshold
+                ))
+                self._log_audit({
+                    "ts": now_ts(),
+                    "batch_id": batch_id,
+                    "kind": "column_decision",
+                    "column": col,
+                    "decision": decision,
+                    "scores": scores,
+                    "threshold": float(self.threshold),
+                })
+            # Row filter: stable & vectorized, single copy
+            if kept_cols:
+                df_kept = df[kept_cols] # view
+                min_valid = max(1, int(len(kept_cols) * 0.4))
+                mask = df_kept.notna().sum(axis=1) >= min_valid
+                df_final = df_kept.loc[mask].copy()
+            else:
+                df_final = df.iloc[0:0].copy()
+            # PID threshold adjust
+            retention = len(kept_cols) / max(1, len(df.columns))
+            err = float(retention - self.target_retention)
+            adj = float(self.pid.step(err))
+            self.threshold = float(np.clip(self.threshold + adj, self.MIN_THR, self.MAX_THR))
+            lineage = {
+                "batch_id": batch_id,
+                "kept": kept_cols,
+                "dropped": dropped_cols,
+                "threshold": float(self.threshold),
+                "retention": float(retention),
+                "pid_adjust": float(adj),
+            }
+            self.explain_cards[batch_id] = cards
+            after_metrics = {
+                "risk": float(np.clip(1.0 - self.threshold, 0.0, 1.0)),
+                "loss": float(np.clip(1.5 - self.threshold, 0.0, 5.0)),
+                "stability": float(np.clip(self.threshold, 0.0, 1.0)),
+            }
+            self.effect.collect(batch_id, after_metrics)
+            self.timeline.add(TimelineEvent(
+                ts=now_ts(),
+                step=self._step,
+                kind="refine_done",
+                severity="info",
+                title=f"Refine Done: kept={len(kept_cols)} dropped={len(dropped_cols)}",
+                incident_id=batch_id,
+                tags=["batch", "refine"],
+                detail=lineage
+            ))
+            # Queue: OK
+            self.queue.append(QueueItem(
+                ts=now_ts(),
+                batch_id=batch_id,
+                status="OK",
+                input_rows=int(len(df)),
+                input_cols=int(len(df.columns)),
+                kept_cols=int(len(kept_cols)),
+                dropped_cols=int(len(dropped_cols)),
+                threshold=float(self.threshold),
+            ))
+            return df_final, lineage, cards
+        except Exception as e:
+            tb = traceback.format_exc(limit=5)
+            self.timeline.add(TimelineEvent(
+                ts=now_ts(),
+                step=self._step,
+                kind="error",
+                severity="high",
+                title=f"Batch Failed: {batch_id}",
+                incident_id=batch_id,
+                tags=["error"],
+                detail={"error": str(e), "trace": tb}
+            ))
+            self.queue.append(QueueItem(
+                ts=now_ts(),
+                batch_id=batch_id,
+                status="FAIL",
+                input_rows=int(len(df)) if df is not None else 0,
+                input_cols=int(len(df.columns)) if hasattr(df, "columns") else 0,
+                error=str(e),
+            ))
+            raise
+# ==============================================================================
+# 9) (Optional) Quick self-check (no pytest required)
+# ==============================================================================
+if **name** == "**main**":
+    # Quick DAG sanity
+    tl = TimelineStore()
+    runner = DAGRunner(tl)
+    order = []
+    def node_a(*, __):
+        order.append("A")
+        return "A"
+    def node_b(*, deps):
+        assert "a" in deps
+        order.append("B")
+        return "B"
+    runner.add(DAGNode("a", "A", node_a))
+    runner.add(DAGNode("b", "B", node_b, deps=["a"]))
+    outs = runner.run(None)
+    print("DAG order:", order)
+    print("DOT:\n", runner.dag_to_dot("demo"))
+    print("Outputs:", outs)
+    # Quick engine sanity
+    rng = np.random.default_rng(0)
+    df = pd.DataFrame({
+        "income": rng.normal(5000, 100, 100),
+        "city": rng.choice(["Seoul", "Busan"], 100),
+        "noise": ["x"] * 100,
+        "id": np.arange(100)
+    })
+    eng = DataRefineryEngine(target_kpi="income")
+    out, lin, cards = eng.refine(df)
+    print("Engine threshold:", eng.threshold)
+    print("Lineage:", lin)
+    print("Explain cards:", len(cards))
