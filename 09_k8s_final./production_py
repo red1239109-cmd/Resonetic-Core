@@ -1,0 +1,200 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 red1239109-cmd
+# ==============================================================================
+# File: resonetics_production_v10.py
+# Product: Resonetics Production Platform (Streamlit + Optuna + Plotly)
+# Usage: streamlit run resonetics_production_v10.py
+# ==============================================================================
+
+import streamlit as st
+import numpy as np
+import pandas as pd
+import time
+import optuna
+import plotly.express as px
+import plotly.graph_objects as go
+from typing import Dict
+
+# [Import Core Modules]
+# (같은 폴더에 v5.1 파일이 있어야 함)
+from resonetics_k8s_v5_1_enterprise import KubernetesSmartTensorEnv
+
+# ==============================================================================
+# 1. Core Logic: Parametric Agent
+# ==============================================================================
+class ParametricQAgent:
+    def __init__(self, action_space, lr, gamma, epsilon_decay):
+        self.q_table = np.zeros((5, 5, 5, 8))
+        self.lr = lr
+        self.gamma = gamma
+        self.epsilon = 1.0
+        self.epsilon_decay = epsilon_decay
+        
+    def _to_state(self, obs):
+        avg_load = (obs[-5] + obs[-4]) / 2
+        return (min(4, int(avg_load*5)), min(4, int(obs[-6]*5)), min(4, int(obs[-1]*5)))
+
+    def act(self, obs):
+        if np.random.rand() < self.epsilon: return np.random.randint(0, 8)
+        return np.argmax(self.q_table[self._to_state(obs)])
+
+    def learn(self, obs, act, rew, next_obs, done):
+        s = self._to_state(obs)
+        ns = self._to_state(next_obs)
+        target = rew + (0 if done else self.gamma * np.max(self.q_table[ns]))
+        self.q_table[s][act] += self.lr * (target - self.q_table[s][act])
+        if done: self.epsilon *= self.epsilon_decay
+
+# ==============================================================================
+# 2. AutoML Worker (Optuna Objective)
+# ==============================================================================
+def objective(trial):
+    # 1. Hyperparameter Sampling
+    lr = trial.suggest_float('lr', 0.01, 0.5, log=True)
+    gamma = trial.suggest_float('gamma', 0.8, 0.99)
+    eps_decay = trial.suggest_float('epsilon_decay', 0.9, 0.999)
+    
+    # 2. Environment Config (Fixed for fairness)
+    env_cfg = {"max_budget": 100.0, "max_steps": 400}
+    env = KubernetesSmartTensorEnv(config=env_cfg)
+    agent = ParametricQAgent(env.action_space, lr, gamma, eps_decay)
+    
+    # 3. Fast Evaluation (3 Episodes)
+    rewards = []
+    for _ in range(3):
+        obs, _ = env.reset()
+        ep_r = 0
+        while True:
+            act = agent.act(obs)
+            next_obs, r, term, trunc, _ = env.step(act)
+            agent.learn(obs, act, r, next_obs, term)
+            obs = next_obs
+            ep_r += r
+            if term or trunc: break
+        rewards.append(ep_r)
+        
+    # Optuna Pruning (나쁜 파라미터 조기 종료)
+    avg_reward = np.mean(rewards)
+    trial.report(avg_reward, step=3)
+    if trial.should_prune():
+        raise optuna.exceptions.TrialPruned()
+        
+    return avg_reward
+
+# ==============================================================================
+# 3. Streamlit UI
+# ==============================================================================
+st.set_page_config(page_title="Resonetics Grid Center", layout="wide", page_icon="🧠")
+
+# --- Header ---
+st.title("🧠 Resonetics: Autonomous Ops Platform")
+st.markdown("Automated Tuning & Monitoring for Kubernetes Agents")
+
+# --- Sidebar: Config ---
+st.sidebar.header("⚙️ Experiment Config")
+n_trials = st.sidebar.slider("AutoML Trials", 5, 50, 10)
+run_benchmark = st.sidebar.checkbox("Run Benchmark after Tuning", True)
+
+# --- Main Layout ---
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    st.subheader("1. AutoML Status")
+    start_btn = st.button("🚀 Start Optimization Loop")
+    
+    status_box = st.empty()
+    metric_box = st.metric("Best Reward", "0.0")
+    
+    if start_btn:
+        status_box.info("Initializing Optuna Study...")
+        
+        # Run Optuna
+        study = optuna.create_study(direction="maximize", pruner=optuna.pruners.MedianPruner())
+        
+        # Progress Bar & Live Update
+        progress = st.progress(0)
+        chart_spot = st.empty()
+        history_df = pd.DataFrame(columns=['trial', 'value'])
+        
+        for i in range(n_trials):
+            study.optimize(objective, n_trials=1) # One by one for UI update
+            
+            # Update UI
+            progress.progress((i + 1) / n_trials)
+            best_val = study.best_value
+            metric_box.metric("Best Reward", f"{best_val:.2f}")
+            
+            # Live Chart
+            new_row = pd.DataFrame({'trial': [i], 'value': [study.trials[-1].value]})
+            history_df = pd.concat([history_df, new_row], ignore_index=True)
+            
+            fig = px.line(history_df, x='trial', y='value', title="Optimization Trajectory")
+            chart_spot.plotly_chart(fig, use_container_width=True)
+            
+        status_box.success("✅ Optimization Complete!")
+        
+        st.write("### 🏆 Best Hyperparameters")
+        st.json(study.best_params)
+        
+        # Save to Session State for Benchmark
+        st.session_state['best_params'] = study.best_params
+        st.session_state['tuned'] = True
+
+with col2:
+    st.subheader("2. Production Benchmark")
+    
+    if 'tuned' in st.session_state and st.session_state['tuned']:
+        if st.button("▶️ Run Production Simulation") or run_benchmark:
+            params = st.session_state['best_params']
+            
+            # Init Env with Best Params
+            env = KubernetesSmartTensorEnv(config={"max_budget": 100.0, "max_steps": 500})
+            agent = ParametricQAgent(env.action_space, **params)
+            
+            # Live Simulation
+            obs, _ = env.reset()
+            rewards_log = []
+            loads_log = []
+            
+            sim_chart = st.empty()
+            
+            with st.spinner("Running Simulation..."):
+                while True:
+                    act = agent.act(obs)
+                    obs, r, term, trunc, info = env.step(act)
+                    rewards_log.append(r)
+                    loads_log.append(info['avg_load'])
+                    
+                    if len(rewards_log) % 10 == 0:
+                        # Dual Axis Chart
+                        df = pd.DataFrame({
+                            'Step': range(len(rewards_log)),
+                            'Reward': rewards_log,
+                            'Load': loads_log
+                        })
+                        
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=df['Step'], y=df['Reward'], name='Reward', line=dict(color='blue')))
+                        fig.add_trace(go.Scatter(x=df['Step'], y=df['Load'], name='System Load', line=dict(color='red'), yaxis='y2'))
+                        
+                        fig.update_layout(
+                            title="Live Agent Telemetry",
+                            yaxis=dict(title="Reward"),
+                            yaxis2=dict(title="Load", overlaying='y', side='right', range=[0, 1]),
+                            height=400
+                        )
+                        sim_chart.plotly_chart(fig, use_container_width=True)
+                    
+                    if term or trunc: break
+            
+            # Final Report
+            st.success(f"Simulation Finished. Total Steps: {len(rewards_log)}")
+            if term: st.error("Outcome: TERMINATED (OOM)")
+            else: st.balloons(); st.success("Outcome: SURVIVED (Success)")
+
+    else:
+        st.info("👈 Please run optimization first.")
+
+# --- Footer ---
+st.markdown("---")
+st.markdown("© 2025 Resonetics Inc. | Powered by Ray, Optuna & Streamlit")
