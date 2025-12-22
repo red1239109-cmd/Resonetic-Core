@@ -14,13 +14,7 @@
 *   Python 3.8 or higher
 *   pip (Python package manager)
 
-### Installation
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/YOUR_USERNAME/resonetic-civilization.git
-    cd resonetic-civilization
-    ```
-2.  Install required dependencies:
+.  Install required dependencies:
     ```bash
     pip install -r requirements.txt
     ```
