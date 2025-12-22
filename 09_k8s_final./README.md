@@ -1,5 +1,3 @@
----
-
 # 🧠 Resonetics: Autonomous Ops Platform
 
 **Self-Healing Kubernetes Cluster Management via Reinforcement Learning**
