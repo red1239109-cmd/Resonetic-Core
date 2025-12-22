@@ -1,113 +1,97 @@
-# 🧠 Resonetics: Autonomous Ops Platform
+# 🧠 Resonetics v13.2: The Final Artifact
 
-**Self-Healing Kubernetes Cluster Management via Reinforcement Learning**
+**Prophet-Guided Deep Reinforcement Learning for Autonomous Ops**
 
-> *"Systems drift toward entropy. Intelligence is the compression of interventions required to keep them alive."*
+> *"Intelligence is not just about solving problems; it's about predicting them before they exist."*
 
-**Resonetics** is a research-grade simulation platform designed to train autonomous agents for managing distributed systems under strict constraints. It models a Kubernetes cluster not as a static entity, but as a dynamic **3D tensor grid** subject to the **Red Queen Effect**—where entropy (CPU load, memory leaks) continuously rises, and agents must act efficiently just to maintain stability.
+**Resonetics v13.2** represents the culmination of the autonomous operations research. Unlike previous tabular approaches (v10), this artifact deploys a **Deep Q-Network (DQN)** augmented with a specialized **"Prophet" Network**—a secondary neural brain dedicated solely to forecasting system collapse risks (OOM/Crash).
 
-Moving beyond simple simulation, this project has evolved into **Resonetics v10.0**, a full-stack **MLOps platform** featuring automated hyperparameter tuning (AutoML), real-time observability, and forensic replay systems.
-
----
-
-## 🌟 Key Features
-
-### 1. The Environment: Kubernetes Smart Tensor (v5.1 Enterprise)
-
-The core simulation environment is fully **Gymnasium-compliant**, rigorously modeling the trade-offs between system stability and operational cost.
-
-* **3D Tensor State:** The cluster is represented as a `(H, W, C)` grid:
-* **Channel 0 (CPU):** Stochastic load fluctuations.
-* **Channel 1 (Memory):** Monotonically increasing pressure (Drift).
-* **Channel 2 (Priority):** Business criticality of nodes (Critical vs Non-Critical).
-
-
-* **Partial Observability:** The agent sees only a local **3x3 neighborhood** plus global aggregate statistics, forcing it to balance **exploration** (finding hotspots) and **exploitation** (fixing them).
-* **Strategic Action Space (Discrete 8):**
-* **Movement (0-3):** Navigate the grid.
-* **Precise Interventions:** `Full Clean` (4), `Mem-Only Clean` (6), `CPU Throttle` (7).
-* **Global Scaling (5):** An expensive, high-impact action that prioritizes critical nodes using a smart sorting algorithm.
-
-
-
-### 2. The Research Facility: Automated MLOps (v10.0)
-
-Resonetics is no longer just a script; it is a comprehensive **platform**.
-
-* **🧪 AutoML Integration (Optuna):** Automatically searches for the "sweet spot" of environmental difficulty and agent hyperparameters using Bayesian optimization.
-* **📊 Live Control Room (Streamlit):** A real-time dashboard visualizing reward trends, action distributions, and system loads on dual-axis charts.
-* **💾 Forensics & Replay:** Automatically captures "Black Box" JSON logs when an agent fails (OOM), enabling post-mortem analysis of crash scenarios.
+This system transforms Kubernetes cluster management from a reactive "whack-a-mole" game into a predictive, strategic art form, running within a **Streamlit-based production environment** secured against data loss and adversarial attacks.
 
 ---
 
-## 🏛️ Architecture Overview
+## ⚡ Key Innovations (v13.2)
 
-The system is composed of three concentric layers:
+### 1. The Dual-Brain Architecture (DQN + Prophet)
 
-1. **The Kernel (Physics):** A stochastic grid engine that simulates resource drift, noise, and budget recovery dynamics.
-2. **The Agent (Policy):**
-* **Baseline:** A smart heuristic that prioritizes critical hotspots based on rule-based logic.
-* **Learner:** A Parametric Q-Learning agent capable of adapting to dynamic difficulty curves.
+The agent is no longer a simple look-up table. It consists of two distinct neural networks working in tandem:
+
+* **The Pilot (DQN):** Learns optimal resource management strategies (Scaling, Cleaning, Throttling) to maximize uptime and efficiency.
+* **The Prophet (Risk Estimator):** A dedicated neural network that observes global trends to predict the *probability of future system failure*.
+* *Mechanism:* If the Prophet senses high risk, it dynamically suppresses the Pilot's exploratory behavior (`epsilon` decay), forcing a "Safety First" mode.
 
 
-3. **The Platform (Ops):** A Streamlit + Optuna wrapper that orchestrates batch experiments, tuning, and visualization.
+
+### 2. Production-Grade Stability & Security
+
+We have moved beyond "research code" to "production artifact":
+
+* **🛡️ Secure Model Loading:** Implemented `weights_only=True` serialization to prevent Pickle-based Remote Code Execution (RCE) attacks. Includes legacy fallback for compatibility.
+* **💾 Graceful Shutdown & Persistence:**
+* **Auto-Save:** Automatically snapshots the neural weights to local disk upon reaching runtime limits.
+* **Zero Data Loss:** Metrics are logged to CSV in real-time with overwrite protection.
+
+
+* **📉 Optimized Visualization:** Rendering logic has been decoupled from the training loop, ensuring smooth 60fps UI updates without slowing down the learning core.
 
 ---
 
-## ✅ Benchmark Results
+## 🏛️ System Architecture
 
-We compared the **Smart Heuristic Baseline** against a **Random Policy** and our **Tuned Q-Learning Agent** across 500 episodes.
+### The Environment: Kubernetes Smart Tensor (v5.1)
 
-| Policy | Avg Reward | Survival Steps | OOM Rate | Critical Failure % |
-| --- | --- | --- | --- | --- |
-| **Random** | -124.5 | 312.4 | 1.82 | 68% |
-| **Heuristic** | **+189.1** | 456.8 | 0.34 | 12% |
-| **Q-Learning** | +145.2* | **498.0** | **0.10** | **5%** |
+* **State:** 3D Tensor Grid `(Height, Width, Channels)` representing CPU, Memory Drift, and Priority.
+* **Entropy:** Simulates the "Red Queen Effect"—constant degradation requiring active intervention.
 
-*> Note: The Q-Learning agent achieved lower total rewards than the Heuristic but demonstrated superior **survival capabilities** (longer steps, fewer crashes), indicating a more risk-averse, sustainable strategy suitable for production stability.*
+### The Agent: Prophet-Guided Deep Learner
+
+* **Input:** Local 3x3 Convolution + Global System Stats.
+* **Action Space:** Discrete (8 Actions) including movement, specific resource cleaning, and global scaling.
+* **Optimizer:** Dual Adam Optimizers with decoupled learning rates (Prophet learns cautiously at `0.5x` speed to provide stable guidance).
 
 ---
 
 ## 🚀 Quickstart
 
-### 1. Installation
+### 1. Prerequisites
 
-Install the required scientific and visualization stack.
+Upgrade your stack to support Deep Learning (PyTorch).
 
 ```bash
-pip install -r requirements.txt
+pip install torch torchvision plotly pandas numpy streamlit packaging
 
 ```
 
-### 2. Launch the Platform
+### 2. Launch the Artifact
 
-Start the **Resonetics Control Room**. This will launch the Streamlit dashboard in your browser.
+Run the finalized application.
 
 ```bash
-streamlit run resonetics_production_v10.py
+streamlit run app.py
 
 ```
 
-### 3. Workflow
+### 3. Operational Workflow
 
-1. **AutoML Tuning:** Click `Start Optimization` to let Optuna find the best hyperparameters.
-2. **Live Simulation:** Watch the agent manage the cluster in real-time.
-3. **Analysis:** Review the `Reward vs Load` dual-axis chart to understand the agent's decision-making process.
+1. **Configure:** Set `Max Steps` and `Learning Rate` in the sidebar.
+2. **Safety Limits:** Set `Max Runtime (h)` to ensure the agent saves data before cloud environments timeout.
+3. **Train:** Click `▶️ Start`. The agent will begin exploring.
+4. **Observe:** Watch the **"Prophet Risk"** metric. A rising risk score indicates the AI perceives impending doom even before the load spikes.
 
 ---
 
-## 📜 Design Philosophy: "Via Negativa"
+## 📊 Legacy Support (v10)
 
-Resonetics follows the principle of **Via Negativa**—improving systems by removing failure modes rather than adding features.
-We do not hard-code "how to succeed." We rigorously model **"what causes failure"** (Entropy, Bankruptcy, Panic) and build agents that naturally evolve to avoid them.
+* **Resonetics v10 (Q-Table/Optuna):** Kept as a benchmark baseline. It represents the "Classical ML" approach compared to the "Deep RL" approach of v13.
+* To run the legacy system: `streamlit run old_resonetics_v10.py` (rename if necessary).
 
-* **Budget Constraints** prevent infinite scaling.
-* **Partial Observability** prevents omniscience.
-* **Dynamic Difficulty** prevents overfitting.
+---
 
-This ensures that any surviving agent has learned robust, generalized stability patterns.
+## 📜 Design Philosophy
+
+**"Survive First, Optimize Later."**
+Most RL agents fail because they greedily chase rewards until they crash. The **Prophet Network** introduces the concept of "Fear" to the AI. By quantifying the risk of death, the agent learns to sacrifice short-term efficiency for long-term survival—mimicking the evolutionary pressure of biological systems.
 
 ---
 
 **© 2025 Resonetics Research Institute** | *From Entropy to Anti-Fragility.*
-
