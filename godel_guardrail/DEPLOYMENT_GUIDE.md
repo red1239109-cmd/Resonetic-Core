@@ -102,5 +102,3 @@ Configure the following alerts in AlertManager:
 | **Metrics** | Verify Grafana dashboard is consuming `/metrics` | ⬜ |
 
 ---
-
-**© 2025 Godel Guardrail Team** | *Secure AI Infrastructure*
