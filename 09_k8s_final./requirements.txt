@@ -17,3 +17,15 @@ matplotlib>=3.8.0
 # --- Utilities ---
 tqdm>=4.66.0
 watchdog>=3.0.0  # (Optional) For faster Streamlit reloads
+
+
+
+
+
+
+
+streamlit>=1.28.0
+torch>=2.0.0
+numpy>=1.24.0
+pandas>=2.0.0
+plotly>=5.17.0
