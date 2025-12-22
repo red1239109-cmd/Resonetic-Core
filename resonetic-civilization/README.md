@@ -35,16 +35,6 @@ Your default web browser will open automatically, displaying the simulation cont
 4.  **Analyze Results:** View real-time metrics, event logs, and interactive charts comparing key indicators like Trust, Population, and Average Wealth.
 5.  **Export Data:** Download the simulation history as a CSV file from the "Data Export" tab for further statistical analysis.
 
-## 📁 Project Structure
-```
-resonetic_civilization_v3_3.py  # Main simulation and dashboard application
-requirements.txt                # Python dependencies
-README.md                       # This file
-# Optional but recommended for a complete repository:
-LICENSE                         # MIT License
-.gitignore                      # Files to ignore in version control
-```
-
 ## 🔬 Research & Experiment Ideas
 This simulator is designed for experimentation. Here are some hypotheses you can test:
 *   **Network Resilience:** Does a society with stronger social connections (`k=8`) recover from a pandemic faster than one with weaker ties (`k=2`)?
