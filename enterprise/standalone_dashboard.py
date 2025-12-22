@@ -2,20 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2025 red1239109-cmd
 # ==============================================================================
-# File: standalone_dashboard.py_v1.2.py
-# Version: v1.2 (Enterprise Final - Patched)
+# File: standalone_dashboard_v1_2_1.py
+# Version: v1.2.1 (Enterprise Final - Robustness Patched)
 # Description: 
 #   Enterprise-grade AI Operation System with Refined Governance
 #   
-#   Changelog (v1.2):
-#     1. [Schema] Separated KNOBS (Input) from METRICS (Output) to prevent injection.
-#     2. [Governance] Fixed "Deadlock Paradox" in Supreme Court (Allow safe actions during instability).
-#     3. [Analysis] Action Analyzer now emits verdicts immediately upon window completion.
-#   
-#   [PATCHES APPLIED]:
-#     ✅ Patch 1: DEMO now forces RESOLVED + POSTMORTEM (required_stable_steps = 3)
-#     ✅ Patch 2: PostmortemGenerator actor extraction bug fixed
-#     ✅ Patch 3: Reality weight allowed during instability (only LR blocked)
+#   Changelog (v1.2.1):
+#     1. [Fix] Explicit ImportError if Flask is missing (Fail Fast).
+#     2. [Fix] Type-safe timestamp formatting (handles string inputs from JSON).
+#     3. [Fix] Defensive statistics calculation.
+#     4. [Demo] Improved metric tracking logic in simulation.
 # ==============================================================================
 from __future__ import annotations
 import json
@@ -34,13 +30,14 @@ from datetime import datetime
 def now_ts() -> float:
     return float(time.time())
 
-def fmt_ts(ts: float) -> str:
+def fmt_ts(ts: Any) -> str:
+    """Robust timestamp formatter handling float, int, and string inputs."""
     try:
-        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
+        val = float(ts)
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(val))
     except Exception:
         return str(ts)
 
-# [v1.2] Schema Separation (Single Source of Truth)
 # Inputs we can control
 KNOB_SCHEMA = {
     "learning_rate": float,
@@ -56,7 +53,6 @@ METRIC_SCHEMA = {
 }
 
 def validate_knob_keys(d: Dict[str, Any]) -> bool:
-    # Only allow keys that exist in KNOB_SCHEMA
     return all(k in KNOB_SCHEMA for k in d.keys())
 
 # ==============================================================================
@@ -195,14 +191,13 @@ class IncidentRegistry:
         }
 
 # ==============================================================================
-# 2. Logic Engines (Analyzers, Trackers, and The Court)
+# 2. Logic Engines
 # ==============================================================================
 
-# [v1.2] The Supreme Court (Refined)
 @dataclass
 class Judgement:
     approved: bool
-    ruling: str              # CONSTITUTIONAL | UNCONSTITUTIONAL | MISTRIAL
+    ruling: str 
     reason: str
     violates: Optional[str] = None
 
@@ -212,13 +207,11 @@ class SupremeCourt:
             {
                 "id": "ARTICLE_1",
                 "desc": "Knob Schema Violation (Security)",
-                # [v1.2] Use validate_knob_keys (Fail-Closed if unknown keys present)
                 "check": lambda plan, ctx: not validate_knob_keys(plan.knobs)
             },
             {
                 "id": "ARTICLE_2",
                 "desc": "Unsafe Manipulation during Instability (< 0.2)",
-                # [v1.2 PATCH 3] Reality weight allowed, only LR blocked during instability
                 "check": lambda plan, ctx: (ctx.get("stability", 1.0) < 0.2) and ("learning_rate" in plan.knobs)
             },
             {
@@ -242,7 +235,6 @@ class SupremeCourt:
                 return Judgement(False, "MISTRIAL", f"Verification failure: {e}")
         return Judgement(True, "CONSTITUTIONAL", "No violations")
 
-# [v1.2] Action Effect Analyzer (Real-time Verdict)
 class ActionEffectAnalyzer:
     def __init__(self, timeline: IncidentTimeline, window_steps: int = 10):
         self.timeline = timeline
@@ -263,7 +255,6 @@ class ActionEffectAnalyzer:
         buf = self.buffers[action_id]
         buf["samples"].append(dict(metrics or {}))
         
-        # [v1.2] Immediate Finalization Check
         if len(buf["samples"]) >= self.window_steps:
             self.finalize(action_id, step=buf["start_step"] + self.window_steps)
 
@@ -274,15 +265,22 @@ class ActionEffectAnalyzer:
         if not samples: return None
 
         baseline = buf["baseline"]
-        def avg(key: str):
+        
+        # [Fix] Explicit defense against empty list or bad types
+        def avg(key: str) -> Optional[float]:
             vals = [s.get(key) for s in samples if isinstance(s.get(key), (int, float))]
-            return float(statistics.mean(vals)) if vals else None
+            if not vals: 
+                return None
+            try:
+                return float(statistics.mean(vals))
+            except statistics.StatisticsError:
+                return None
 
         after = {k: avg(k) for k in ["risk", "loss", "stability"]}
         delta = {}
         for k, v_after in after.items():
             v_base = baseline.get(k)
-            if isinstance(v_after, (int, float)) and isinstance(v_base, (int, float)):
+            if v_after is not None and isinstance(v_base, (int, float)):
                 delta[k] = float(v_after - v_base)
 
         score = 0.0
@@ -326,10 +324,11 @@ class PostmortemGenerator:
             "final_verdict": effects[-1].get("detail", {}).get("verdict") if effects else "UNKNOWN",
         }
         timeline_lines = []
+        # [Fix] Use safe timestamp formatting
         if opens: timeline_lines.append(f"[OPEN] {fmt_ts(opens[0]['ts'])} - {opens[0].get('title')}")
         for a in actions:
             tags = a.get("tags", [])
-            actor = tags[1] if len(tags) > 1 else "operator"  # [PATCH 2] Fixed actor extraction
+            actor = tags[1] if len(tags) > 1 else "operator"
             timeline_lines.append(f"[ACTION] {fmt_ts(a['ts'])} - {a.get('title')} (Actor: {actor})")
         for e in effects:
             d = e.get("detail", {})
@@ -392,7 +391,6 @@ class ActionApplicator:
         except Exception:
             return False
 
-        # ⚖️ Supreme Court Review
         judgement = self.court.review(plan, context)
         if not judgement.approved:
             self.timeline.add(TimelineEvent(
@@ -404,7 +402,6 @@ class ActionApplicator:
             print(f" 🚫 [SupremeCourt] Action Blocked: {judgement.reason}")
             return False
 
-        # --- Constitutional Path Only ---
         if self.effect_analyzer and self.get_metrics:
             try: base_metrics = self.get_metrics()
             except: base_metrics = {}
@@ -438,7 +435,10 @@ except ImportError:
 
 class EnterpriseDashboard:
     def __init__(self, timeline: IncidentTimeline, registry: IncidentRegistry, host="0.0.0.0", port=8080):
-        if not FLASK_AVAILABLE: return
+        # [Fix] Explicit failure if Flask is missing
+        if not FLASK_AVAILABLE: 
+            raise ImportError("Flask is required for EnterpriseDashboard. Install with: pip install flask")
+        
         self.timeline = timeline
         self.registry = registry
         self.host = host
@@ -548,7 +548,7 @@ class EnterpriseDashboard:
         self.app.run(host=self.host, port=self.port, debug=False)
 
 # ==============================================================================
-# 4. Demo Simulation (Includes Veto & Schema Check - PATCHED)
+# 4. Demo Simulation
 # ==============================================================================
 def demo():
     # 1. Initialize
@@ -571,42 +571,48 @@ def demo():
     # 2. Scenario
     print("🔥 [Step 100] Anomaly Detected! (Unstable: 0.15)")
     inc = registry.create_or_update(severity="high", title="Critical Risk Spike", step=100, tags=["anomaly"])
-    # [PATCH 1] Force RESOLVED in demo by lowering required stable steps
+    # Force RESOLVED in demo by lowering required stable steps
     registry.by_id[inc.incident_id].required_stable_steps = 3
     timeline.add(TimelineEvent(ts=now_ts(), step=100, kind="anomaly", severity="high", title="Risk > 0.8", incident_id=inc.incident_id))
 
-    # [SCENARIO A] Schema Violation (Setting 'risk' directly)
+    # [SCENARIO A] Schema Violation
     print("😈 [Step 101] Autopilot tries to cheat (Set Risk=0)...")
     cheat_plan = ActionPlan(action_id="act_cheat", incident_id=inc.incident_id, title="Cheat Mode", knobs={"risk": 0.0}, reason="Quick fix")
-    applicator.apply(cheat_plan, get_state, set_state, 101) # Should fail by ARTICLE_1
+    applicator.apply(cheat_plan, get_state, set_state, 101) 
 
-    # [SCENARIO B] Unsafe Action during Instability (LR change)
+    # [SCENARIO B] Unsafe Action during Instability
     print("😈 [Step 102] Autopilot tries unsafe action (LR change) while unstable...")
     unsafe_plan = ActionPlan(action_id="act_unsafe", incident_id=inc.incident_id, title="Boost LR", knobs={"learning_rate": 0.02}, reason="Boost")
-    applicator.apply(unsafe_plan, get_state, set_state, 102) # Should fail by ARTICLE_2
+    applicator.apply(unsafe_plan, get_state, set_state, 102)
 
-    # [SCENARIO C] Safe Action (Dropout) - Should Pass! (Paradox Fix)
+    # [SCENARIO C] Safe Action (Dropout)
     print("🛡️ [Step 103] Applying Safe Action (Dropout)...")
     safe_plan = ActionPlan(action_id="act_safe", incident_id=inc.incident_id, title="Increase Dropout", knobs={"dropout": 0.5}, reason="Dampen")
     applicator.apply(safe_plan, get_state, set_state, 103)
 
-    # [SCENARIO D] Reality Weight during Instability - Should Pass with PATCH 3!
-    print("🛡️ [Step 104] Applying Reality Weight during instability (PATCH 3 allows)...")
+    # [SCENARIO D] Reality Weight during Instability
+    print("🛡️ [Step 104] Applying Reality Weight during instability...")
     reality_plan = ActionPlan(action_id="act_reality", incident_id=inc.incident_id, title="Increase Reality Weight", knobs={"reality_weight": 2.0}, reason="Ground to reality")
     applicator.apply(reality_plan, get_state, set_state, 104)
 
     # Simulate Stabilization
     print("⏳ [Step 106-115] Stabilization...")
+    
+    # [Fix] Improved Logic: Track actions independently
+    active_actions = ["act_safe", "act_reality"]
+    
     for i in range(10):
         step = 106 + i
         current_metrics["loss"] -= 0.1
         current_metrics["risk"] -= 0.05
         current_metrics["stability"] += 0.08
         
-        effect.collect("act_safe", collect_metrics()) # Real-time check
-        effect.collect("act_reality", collect_metrics()) # For second action
+        # [Fix] Collect metrics for each active action independently
+        for act_id in active_actions:
+            effect.collect(act_id, collect_metrics()) 
+            
         tracker.observe(inc.incident_id, step, current_metrics["stability"], current_metrics)
-        time.sleep(0.1)
+        time.sleep(0.05)
 
     print("✅ [Step 120] Resolution...")
     tracker.observe(inc.incident_id, 120, 0.95, current_metrics)
