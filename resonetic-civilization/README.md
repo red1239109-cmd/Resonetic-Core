@@ -8,6 +8,7 @@
 *   **🌪️ Crisis Simulation:** Test resilience against Black Swan events like pandemics, financial crashes, and disinformation.
 *   **⚖️ A/B Testing:** Simultaneously compare two civilizations with different policies (growth-focused vs. resilience-focused).
 *   **📊 Dashboard & Export:** Interactive dashboard built with Streamlit and Plotly. Export data to CSV for analysis in R, Stata, or Python.
+  <img width="1311" height="1229" alt="image" src="https://github.com/user-attachments/assets/7a362fbe-a878-4219-b642-09af78f6419c" />
 
 ## 🛠️ Installation & Quick Start
 ### Prerequisites
