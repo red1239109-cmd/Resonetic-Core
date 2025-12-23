@@ -1,0 +1,12 @@
+# Kubernetes ConfigMap + v10.1
+spec:
+  containers:
+  - name: guardrail
+    env:
+    - name: GODEL_KEY
+      valueFrom:
+        secretKeyRef:
+          name: godel-secret
+          key: encryption-key
+    - name: FAIL_OPEN
+      value: "true"  # 클라우드 환경에서 고가용성
