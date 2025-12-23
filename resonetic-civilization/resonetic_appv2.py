@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 red1239109-c
 # ==============================================================================
 # File: resonetic_civilization_v4_9_ultimate.py
 # Product: Resonetic Civilization v4.9 (Ultimate Edition)
