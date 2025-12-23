@@ -140,24 +140,6 @@ requests_total{tier="premium", status="blocked", plugin="RegexTrap"}
 
 ---
 
-## 🚀 5. One-Command Deploy
-```bash
-# 1. Build
-docker build -t godel-guard:v10.1 .
-# 2. Run (local)
-docker run -p 8000:8000 \
-  -e GODEL_KEY="$(aws kms decrypt ...)" \
-  -e REDIS_URL="redis://cluster.local:6379" \
-  godel-guard:v10.1
-# 3. Helm (K8s)
-helm install godel ./helm-chart \
-  --set image.tag=v10.1 \
-  --set redis.enabled=true \
-  --set kms.enabled=true
-```
-
----
-
 ## 📄 License
 MIT → **Enterprise-friendly**
 
