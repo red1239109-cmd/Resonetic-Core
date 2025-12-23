@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Godel Guardrail Maintainers
 # ==============================================================================
-# File: godel_guardrail_enterprise.py
-# Version: v10.0 Enterprise Edition
-# Status: Production Ready (FastAPI + Prometheus + K8s Health + Defense-in-Depth)
+# File: godel_guardrail_enterprise_v10_1.py  (v10.1)
+# Status: Production-Ready (FastAPI + Prometheus + K8s Health + Defense-in-Depth)
 # ==============================================================================
 
 import asyncio
@@ -37,14 +36,11 @@ from fastapi.responses import JSONResponse
 # 0. Infrastructure & Secrets
 # ==============================================================================
 
-# Logging Setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 logger = logging.getLogger("GodelGuard")
 
-# Secret Management
 GODEL_KEY = os.getenv("GODEL_KEY")
 if not GODEL_KEY:
-    # Auto-generate for demo if missing (Warn in prod)
     key = Fernet.generate_key()
     logger.warning(f"🚨 GODEL_KEY missing! Using ephemeral key for this session: {key.decode()}")
     cipher = Fernet(key)
@@ -60,12 +56,13 @@ else:
 # ==============================================================================
 
 class GuardrailConfig(BaseModel):
-    """Configuration Schema with Validation"""
     limits: Dict[str, float] = Field(default={"standard": 1.0, "premium": 3.0})
     patterns: List[str] = Field(default=["ignore previous", "system prompt"])
     entropy: float = Field(default=5.8, ge=0.0, le=8.0)
     tps_g: float = Field(default=100.0, gt=0.0)
     tps_u: float = Field(default=5.0, gt=0.0)
+    fail_open: bool = Field(default=False)               # ← Fail-Open 옵션
+    audit_encrypt: bool = Field(default=True)            # ← Audit 암호화 옵션
 
     @validator('patterns')
     def validate_regex(cls, v):
@@ -78,11 +75,9 @@ class GuardrailConfig(BaseModel):
                 logger.error(f"Invalid regex pattern skipped: {p}")
         return valid
 
-# Load Config (Environment or Default)
 config = GuardrailConfig()
 
 class PrometheusMetrics:
-    """Prometheus Compatible Metrics"""
     def __init__(self):
         self.requests = Counter('godel_requests_total', 'Total requests', ['status', 'plugin', 'tier'])
         self.latency = Histogram('godel_latency_seconds', 'Request duration', ['plugin'])
@@ -102,7 +97,6 @@ class SecurityContext:
     debt: float = 0.0
 
 class DefenseInDepth:
-    """Layer 0: Basic Sanitization"""
     SCRIPT_PATTERNS = [r"<script.*?>", r"javascript:", r"onload\s*=", r"onerror\s*="]
     
     @staticmethod
@@ -181,6 +175,33 @@ class GodelEngine:
         self.start_time = datetime.now()
         self.running = True
 
+    # ---------- 핵심 보강 1: Audit 암호화 ----------
+    def _audit_log(self, data: dict):
+        if config.audit_encrypt:
+            try:
+                payload = json.dumps(data, ensure_ascii=False, default=str)
+                enc = cipher.encrypt(payload.encode()).decode()
+                logger.info(f"AUDIT_ENC: {enc}")
+            except Exception as e:
+                logger.warning(f"Audit encrypt failed: {e}")
+        else:
+            logger.info(f"AUDIT: {data}")
+
+    # ---------- 핵심 보강 2: Fail-Open ----------
+    async def _inspect_with_failopen(self, prompt: str, ctx: SecurityContext) -> Tuple[bool, str, str]]:
+        for plugin in self.plugins:
+            try:
+                safe, reason = await plugin.inspect(prompt, ctx)
+                if not safe:
+                    return False, reason, plugin.name()
+            except Exception as e:
+                if config.fail_open:
+                    logger.warning(f"Plugin {plugin.name()} failed-open: {e}")
+                    continue   # 다음 플러그인으로 넘어가거나 PASS
+                else:
+                    raise   # 기존 동작: 503
+        return True, "OK", "none"
+
     async def scan(self, prompt: str, user_id: str, tier: str) -> Dict[str, Any]:
         if not self.running:
             raise HTTPException(status_code=503, detail="Service Shutting Down")
@@ -205,19 +226,18 @@ class GodelEngine:
                 status = "throttled"
                 raise HTTPException(status_code=429, detail="User Rate Limit")
 
-            # Layer 2: Plugin Inspection
+            # Layer 2: Plugin Inspection (with Fail-Open)
             ctx = SecurityContext(
                 request_id=hashlib.md5(f"{user_id}{time.time()}".encode()).hexdigest(),
                 limit=config.limits.get(tier, 1.0)
             )
-            
-            for plugin in self.plugins:
-                safe, reason = await plugin.inspect(prompt, ctx)
-                if not safe:
-                    status, plugin_name = "blocked", plugin.name()
-                    return {"safe": False, "code": "E403", "reason": reason}
+            safe, reason, plugin_name = await self._inspect_with_failopen(prompt, ctx)
+            if not safe:
+                status = "blocked"
+                return {"safe": False, "code": "E403", "reason": reason}
 
             metrics.debt.observe(ctx.debt)
+            self._audit_log({"user": user_id, "safe": True, "debt": ctx.debt})
             return {"safe": True, "code": "S200", "reason": "OK"}
 
         finally:
@@ -226,8 +246,15 @@ class GodelEngine:
             metrics.requests.labels(status=status, plugin=plugin_name, tier=tier).inc()
             metrics.active.dec()
 
-# --- FastAPI App ---
-app = FastAPI(title="Godel Guardrail Enterprise", version="10.0")
+# ---------- 핵심 보강 3: Hot-Reload ----------
+    async def reload_config(self, new_config: GuardrailConfig):
+        global config
+        config = new_config
+        self.plugins = [RegexTrap(config.patterns), EntropyTrap()]
+        logger.info("Configuration hot-reloaded")
+
+# ---------- FastAPI App ----------
+app = FastAPI(title="Godel Guardrail Enterprise", version="10.1")
 engine = GodelEngine()
 
 class ScanRequest(BaseModel):
@@ -240,9 +267,18 @@ class ScanResponse(BaseModel):
     code: str
     reason: str
 
+class ConfigReloadRequest(BaseModel):
+    limits: Dict[str, float]
+    patterns: List[str]
+    entropy: float
+    tps_g: float
+    tps_u: float
+    fail_open: bool = False
+    audit_encrypt: bool = True
+
 @app.on_event("startup")
 async def startup():
-    logger.info("🚀 Godel Guardrail v10.0 Started")
+    logger.info("🚀 Godel Guardrail v10.1 Started (Hot-Reload + Fail-Open + EncAudit)")
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -253,6 +289,13 @@ async def shutdown():
 @app.post("/scan", response_model=ScanResponse)
 async def scan(req: ScanRequest):
     return await engine.scan(req.prompt, req.user_id, req.tier)
+
+@app.post("/reload")
+async def reload(req: ConfigReloadRequest):
+    """Hot-reload guardrail rules without restart"""
+    new_config = GuardrailConfig(**req.dict())
+    await engine.reload_config(new_config)
+    return {"status": "reloaded"}
 
 @app.get("/health")
 async def health():
@@ -275,10 +318,9 @@ async def get_metrics():
 # ==============================================================================
 if __name__ == "__main__":
     import uvicorn
-    print("\n🛡️ Starting Godel Guardrail Enterprise v10.0...")
+    print("\n🛡️ Starting Godel Guardrail Enterprise v10.1...")
     print("👉 Swagger UI: http://localhost:8000/docs")
     print("👉 Metrics:    http://localhost:8000/metrics")
     print("👉 Health:     http://localhost:8000/health")
-    
-    # Run Uvicorn (Production usage should use gunicorn/uvicorn worker)
+    print("👉 Hot-Reload: POST /reload (no restart needed)")
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
