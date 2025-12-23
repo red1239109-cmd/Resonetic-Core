@@ -1,104 +1,167 @@
-# 📘 Godel Guardrail Deployment Guide
-
-**Version:** v10.0 Enterprise Edition
-**Target Audience:** DevOps, SRE, and Security Architects
+# 📘 Godel Guardrail Deployment Guide  
+**Version**: v10.1 Enterprise Edition  
+**Target Audience**: DevOps, SRE, Security Architects
 
 ---
 
 ## 🏗️ 1. High Availability & Scalability
+### ❗ Problem: Split-Brain Rate-Limit  
+Current **in-memory TokenBucket** causes **split-brain** when scaling horizontally (e.g., 3 pods → 3× user quota).
 
-The current `v10.0` implementation uses in-memory `TokenBucket` for rate limiting. While fast, this creates a **"Split-Brain"** issue when deployed across multiple Kubernetes pods (e.g., a user gets 3x limit if you run 3 pods).
-
-### ✅ Recommendation: Distributed Rate Limiting (Redis)
-
-For horizontal scaling (Scale-Out), state must be externalized.
-
-* **Architecture:** Replace in-memory `TokenBucket` with **Redis + Lua Scripts**.
-* **Benefits:** Atomic counter increments across the entire cluster.
-* **Implementation Strategy:**
+### ✅ Solution: Distributed Rate-Limit (Redis + Lua)
+**Architecture**: Replace in-memory bucket with **Redis** + **atomic Lua script**.
 
 ```python
-# Pseudo-code for Redis implementation
+# RedisTokenBucket (pseudo)
 class RedisTokenBucket:
-    def __init__(self, redis_client, key, rate, capacity):
-        self.redis = redis_client
+    def __init__(self, redis, key: str, rate: float, capacity: float):
+        self.redis = redis
         self.key = key
-        # ...
+        self.rate = rate
+        self.capacity = capacity
+        self.script = redis.register_script("""
+            local key = KEYS[1]
+            local rate = tonumber(ARGV[1])
+            local capacity = tonumber(ARGV[2])
+            local now = tonumber(ARGV[3])
+            local ttl = math.ceil(capacity / rate)
 
-    async def allow(self):
-        # Use Lua script to ensure atomicity (Check + Decrement)
-        return await self.redis.evalsha(LUA_SCRIPT_HASH, 1, self.key, ...)
+            local last = redis.call('GET', key .. ':last') or now
+            local tokens = tonumber(redis.call('GET', key .. ':tokens') or capacity)
 
+            tokens = math.min(capacity, tokens + (now - last) * rate)
+            local allowed = 0
+            if tokens >= 1 then
+                tokens = tokens - 1
+                allowed = 1
+            end
+
+            redis.call('SET', key .. ':tokens', tokens, 'EX', ttl)
+            redis.call('SET', key .. ':last', now, 'EX', ttl)
+            return allowed
+        """)
+    
+    async def allow(self) -> bool:
+        now = time.time()
+        return bool(await self.script.execute([self.key], [self.rate, self.capacity, now]))
 ```
 
-### ✅ Recommendation: CPU Optimization (Rust/Cython)
+**Benefits**  
+- **Atomic** across cluster → **no split-brain**  
+- **Millisecond-level** latency (Lua inside Redis)  
+- **Horizontal scale** → add pods, **limit stays global**
 
-The **Entropy Trap** and **Regex Trap** are CPU-intensive. Python's Global Interpreter Lock (GIL) may become a bottleneck under extreme TPS (Transactions Per Second).
+---
 
-* **Strategy:** Rewrite the `inspect()` logic of plugins using **Rust** (via PyO3) or **Cython**.
-* **Trigger:** Consider this transition if CPU usage consistently exceeds 70% per pod.
+### ✅ CPU Optimisation (Rust/Cython)
+**Trigger**: CPU > 70 % per pod **sustained**.  
+**Solution**: Rewrite `EntropyTrap.inspect()` & `RegexTrap.inspect()` in **Rust** (PyO3) or **Cython** to bypass GIL.
 
 ---
 
 ## 🛡️ 2. Security & Compliance (Bank-Grade)
+### ❌ Never hard-code keys in env / yaml
+```yaml
+# ❌ BAD - visible in docker inspect
+env:
+  - name: GODEL_KEY
+    value: "s3cr3t"
+```
 
-Current implementation injects `GODEL_KEY` via environment variables. For regulated industries (Finance, Healthcare), this is insufficient.
+### ✅ Use Cloud KMS / Secret Manager
+| Cloud | Service | IAM Pattern |
+|---|---|---|
+| AWS | **KMS** + **SSM Parameter Store** | IRSA (IAM Role for Service Accounts) |
+| GCP | **Secret Manager** | Workload Identity |
+| Azure | **Key Vault** | Pod Identity |
+| K8s | **Vault Sidecar Injector** | Short-lived token |
 
-### ✅ Recommendation: Secret Management (KMS)
+**Flow**  
+1. Pod starts → **fetches key from KMS** (in-memory only)  
+2. **Never** written to disk or env  
+3. Key rotation → **zero-downtime** (`/reload` endpoint)
 
-Never store encryption keys in `deployment.yaml` or environment variables where they can be exposed via `docker inspect`.
+---
 
-* **AWS:** AWS KMS (Key Management Service) + IAM Roles for Service Accounts (IRSA).
-* **Google:** Google Secret Manager.
-* **Kubernetes:** HashiCorp Vault Sidecar Injector.
-* **Mechanism:** The application should fetch the key directly from the Secret Manager into memory upon startup.
+### ✅ PII Protection (GDPR/CCPA)
+**Dual-ID Strategy**  
+| ID Type | Usage | Storage | Reversible |
+|---|---|---|---|
+| **Analytical ID** | metrics, stats | `SHA-256(user_id + salt)` | ❌ |
+| **Audit ID** | legal evidence | `AES-256(user_id, audit_key)` | ✅ (warrant) |
 
-### ✅ Recommendation: PII Protection (GDPR/CCPA)
-
-Logging raw `user_id` allows re-identification of users in audit logs.
-
-* **Strategy:** Store two versions of the ID in logs:
-1. **Analytical ID (Hash):** `SHA-256(user_id + salt)` → For statistical analysis (e.g., "How many distinct users?").
-2. **Audit ID (Encrypted):** `AES-256(user_id, audit_key)` → For legal compliance (only decryptable with a specific warrant/key).
-
-
+**Code** (already in v10.1)
+```python
+# audit log
+audit_clear = {"user": user_id, "safe": True, "debt": ctx.debt}
+audit_cipher = cipher.encrypt(json.dumps(audit_clear).encode()).decode()
+logger.info(f"AUDIT_ENC: {audit_cipher}")
+```
 
 ---
 
 ## 📊 3. Observability & Monitoring
+### ✅ Prometheus Label Hygiene
+**❌ High Cardinality** (memory bomb)  
+```python
+# ❌ NEVER
+requests_total{user_id="alice123"}   # 1 M time-series
+```
 
-The current `PrometheusMetrics` implementation is a solid foundation. However, care must be taken with **High Cardinality**.
+**✅ Safe Labels**  
+```python
+# ✅ OK
+requests_total{tier="premium", status="blocked", plugin="RegexTrap"}
+```
 
-### ✅ Recommendation: Prometheus Label Management
-
-Prometheus stores a separate time series for every unique combination of label values.
-
-* **Risk:** Do **NOT** use `user_id` or `prompt_hash` as a metric label.
-* *Bad:* `requests_total{user_id="alice"}` → Explodes memory if you have 1M users.
-* *Good:* `requests_total{tier="premium", status="blocked"}`.
-
-
-* **Solution:** If user-level granularity is needed, send logs to **Elasticsearch (ELK)** or **Loki** instead of Prometheus metrics.
-
-### ✅ Recommendation: Alerting Rules
-
-Configure the following alerts in AlertManager:
-
-* **P0 (Critical):** `godel_health_status == 0` (Service Down).
-* **P1 (High):** `rate(godel_security_debt[5m]) > Threshold` (Massive Attack Detected).
-* **P2 (Warn):** `process_cpu_seconds_total > 80%` (Scale-out needed).
+**User-level detail** → ship to **ELK/Loki**, **not Prometheus**.
 
 ---
 
-## 🚀 4. Production Checklist
+### ✅ Alerting Rules (AlertManager)
+| Severity | Condition | Action |
+|---|---|---|
+| **P0 Critical** | `up == 0` or `godel_health_status == 0` | Page on-call |
+| **P1 High** | `rate(godel_security_debt[5m]) > 0.8 * limit` | Slack + ticket |
+| **P2 Warn** | `rate(process_cpu_seconds_total[5m]) > 0.8` | Auto-scale HPA |
 
+---
+
+## ✅ 4. Production Checklist
 | Category | Item | Status |
-| --- | --- | --- |
-| **Infra** | Set `replicas: 3` (min) in Kubernetes Deployment | ⬜ |
-| **Infra** | Configure `readinessProbe` to `/health` endpoint | ⬜ |
-| **Infra** | Set `terminationGracePeriodSeconds: 30` | ⬜ |
-| **Network** | Enable Ingress Rate Limiting (e.g., NGINX/ALB) as Layer 1 defense | ⬜ |
-| **Security** | Rotate `GODEL_KEY` via Secret Manager | ⬜ |
-| **Metrics** | Verify Grafana dashboard is consuming `/metrics` | ⬜ |
+|---|---|---|
+| **Infra** | Min **3 replicas** (K8s Deployment) | ⬜ |
+| **Infra** | `readinessProbe: /health` | ⬜ |
+| **Infra** | `terminationGracePeriodSeconds: 30` | ⬜ |
+| **Network** | **Ingress rate-limit** (NGINX / ALB) | ⬜ |
+| **Security** | **KMS** key rotation (no env vars) | ⬜ |
+| **Obs** | **Grafana** dashboard consumes `/metrics` | ⬜ |
+| **Obs** | **AlertManager** rules applied | ⬜ |
 
 ---
+
+## 🚀 5. One-Command Deploy
+```bash
+# 1. Build
+docker build -t godel-guard:v10.1 .
+# 2. Run (local)
+docker run -p 8000:8000 \
+  -e GODEL_KEY="$(aws kms decrypt ...)" \
+  -e REDIS_URL="redis://cluster.local:6379" \
+  godel-guard:v10.1
+# 3. Helm (K8s)
+helm install godel ./helm-chart \
+  --set image.tag=v10.1 \
+  --set redis.enabled=true \
+  --set kms.enabled=true
+```
+
+---
+
+## 📄 License
+MIT → **Enterprise-friendly**
+
+---
+
+**Godel Guardrail** – *"Reason & Security in one loop."*
+```
