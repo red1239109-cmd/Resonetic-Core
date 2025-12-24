@@ -1,260 +1,103 @@
-## What is Resonetics?
+# Resonetics
+**Engineering Tension, Not Intelligence**
 
-Resonetics is **not an AGI**.
-It is a **dynamical control system** designed to prevent saturation
-by balancing **Structure**, **Flow**, and **Tension**.
+Resonetics is **not an AGI**.  
+It is a **dynamical control system** designed to prevent saturation by balancing:
+
+- **Structure** — prevents collapse into chaos (form, constraint)
+- **Flow** — prevents freezing and stagnation (continuous change)
+- **Tension** — rewards productive contradiction between reality and ideal
 
 > Creativity is not optimization.  
 > It is the sustained management of contradiction.
-
----
-
-### Core Idea (3-second read)
-
-- **Structure** prevents collapse into chaos (form, periodic constraint)
-- **Flow** prevents freezing and saturation (continuous change)
-- **Tension** rewards productive contradiction between reality and ideal
 
 Resonetics does **not** resolve tension.  
 It decides **which tensions deserve to live**.
 
 ---
 
-📘 **Conceptual & Mathematical Details**  
-See [CONCEPTS.md](./CONCEPTS.md)
-
-Resonetics
-
-Engineering Tension, Not Intelligence
-
-What Is Resonetics?
-
-Resonetics is not an Artificial General Intelligence (AGI) project.
-
-It does not attempt to simulate human cognition, consciousness, or reasoning.
-
-Instead, Resonetics explores a narrower and more measurable question:
-
-What if sustained tension — not resolution — is the source of creativity and resilience in computational systems?
-
-Rather than forcing contradictions to collapse, Resonetics focuses on:
-
-detecting paradox
-
-measuring structural tension
-
-deciding whether a contradiction should be preserved, ignored, or collapsed
-
-Resonetics does not try to think.
-It decides which tensions are worth letting live.
-
-Core Idea
+## Core idea (3-second read)
 
 Most AI systems optimize for:
-
-accuracy
-
-convergence
-
-stability
+- accuracy
+- convergence
+- stability
 
 Resonetics asks a different question:
 
-What should not be resolved?
+**What should *not* be resolved?**
 
-In many systems, premature resolution destroys:
+Premature resolution can destroy:
+- adaptability
+- creativity
+- long-term stability
 
-adaptability
+Contradiction is treated as a **signal**, not a failure.
 
-creativity
+---
 
-long-term stability
+## What Resonetics does
 
-Resonetics treats contradiction as a signal, not a failure.
+Resonetics focuses on a measurable loop:
 
-Repository Structure
+1. Detect paradox / contradiction  
+2. Measure structural tension  
+3. Decide: **preserve**, **ignore**, or **collapse**
 
-This repository contains multiple evolutionary versions of the same idea, developed sequentially as understanding deepened.
+This is **rule-based, auditable, and reproducible** — not opinion-driven.
 
-Each version removes a previous assumption.
+---
 
-1. Prophet — Enterprise Runtime
+## Repository structure
 
-resonetics_prophet_v8_4_1_enterprise_clean.py
+This repository contains multiple evolutionary versions of the same idea.  
+Each version represents **a discarded assumption** and **a cleaner abstraction**.
 
-A production-grade experimental system focused on system-level self-protection.
+- **Prophet** — enterprise runtime / system self-protection  
+- **Auditor** — structural analyzer (code as living structure)  
+- **Via Negativa** — the creative core: subtractive cognition  
+- **K8s RL Env** *(optional)* — benchmarking under entropy + budget pressure  
 
-Features
+📘 Conceptual & mathematical details: see **[CONCEPTS.md](./CONCEPTS.md)**  
+🧬 Version lineage / archive: see **[VERSIONS.md](./VERSIONS.md)** *(recommended)*
 
-Risk prediction via meta-models
+---
 
-Learning-rate modulation under instability
+## Paradox classification
 
-Concept-drift resilience
+Each paradox is evaluated across measurable dimensions (e.g. tension, coherence, pressure response),
+then mapped to a deterministic verdict:
 
-Prometheus metrics & health checks
+| Type | Meaning | Action |
+|---|---|---|
+| `creative_tension` | stable contradiction generating insight | `PRESERVE_AND_FEED` |
+| `bubble` | inflated claim without structural support | `IGNORE` |
+| `collapse` | internally inconsistent or defensive paradox | `FORCE_COLLAPSE` |
 
-Graceful degradation and checkpointing
+---
 
-Purpose
+## What this project is NOT
 
-Demonstrate metacognition at the system level, not creativity.
+- ❌ Not AGI  
+- ❌ Not a consciousness simulation  
+- ❌ Not a chatbot  
+- ❌ Not claiming emergent intelligence  
 
-Key Question
+Resonetics does not claim intelligence.  
+It studies **tension management**.
 
-How can a system protect itself while learning under pressure?
+---
 
-2. Auditor — Structural Analyzer
+## License
 
-resonetics_auditor_v6_5_hardened.py
+AGPL-3.0  
+Dual-license possible for commercial use (see file headers / contact).
 
-A static analysis tool that treats source code as a living structure, not just text.
+---
 
-Capabilities
+### Final note
 
-AST-based inspection
-
-Function length & deviation analysis
-
-Cyclomatic complexity (expanded McCabe)
-
-Resilience scoring (try/except density)
-
-Async feature detection
-
-Reviewer-stable, deterministic JSON output
-
-Purpose
-
-Measure architectural honesty, not style compliance.
-
-Key Question
-
-Is this system structurally truthful about its own complexity?
-
-3. Via Negativa — Creative Core
-
-resonetics_via_negativa_v1_1_runtime_fixed.py
-
-The conceptual heart of Resonetics.
-
-Implements subtractive cognition:
-
-Unlearning compulsion
-
-Paradox acceptance
-
-Humility derived from uncertainty
-
-Integration instead of fragmentation
-
-Includes:
-
-Paradox classification
-(creative_tension, bubble, collapse)
-
-Energy computation
-
-Action verdicts
-(PRESERVE_AND_FEED, IGNORE, FORCE_COLLAPSE)
-
-Purpose
-
-Explore idea evolution, not task performance.
-
-Key Question
-
-Which contradictions deserve to live?
-
-4. Kubernetes RL Environment (Optional Extension)
-
-resonetics_k8s_v4_5_fixed.py
-
-A reinforcement learning environment modeling autonomous Kubernetes cluster maintenance under budget and entropy pressure.
-
-3D tensor grid (CPU / Memory / Priority)
-
-Red Queen effect (persistent entropy)
-
-Budget-constrained interventions
-
-Partial scaling & inefficient action penalties
-
-Used for behavioral benchmarking, not claims of intelligence.
-
-Paradox Classification Logic
-
-Each paradox is evaluated across measurable dimensions:
-
-tension
-
-coherence
-
-pressure_response
-
-self_protecting
-
-Resulting in a deterministic verdict:
-
-Type	Meaning	Action
-creative_tension	Stable contradiction generating insight	PRESERVE_AND_FEED
-bubble	Inflated claim without structural support	IGNORE
-collapse	Internally inconsistent or defensive paradox	FORCE_COLLAPSE
-
-This is rule-based, auditable, and reproducible — not opinion-driven.
-
-What This Project Is NOT
-
-❌ Not AGI
-
-❌ Not a consciousness simulation
-
-❌ Not a chatbot
-
-❌ Not claiming emergent intelligence
-
-Resonetics does not claim intelligence.
-
-It studies tension management.
-
-Why Multiple Versions?
-
-Because understanding evolved.
-
-Each version represents:
-
-a discarded assumption
-
-a removed illusion
-
-a cleaner abstraction
-
-This is intentional lineage — not indecision.
-
-Philosophy — Via Negativa
-
-“Perfection is achieved, not when there is nothing more to add,
-but when there is nothing left to take away.”
-— Antoine de Saint-Exupéry
-
-Instead of asking:
-
-“What should AI become?”
-
-Resonetics asks:
-
-“What should be removed?”
-
-License
-
-AGPL-3.0
-Dual-license possible for commercial use.
-
-See individual file headers for details.
-
-Final Note
-
-If a computational system ever appears creative,
+If a computational system ever appears creative,  
 it is not because it knows more —
 
-but because it knows what not to resolve.
+but because it knows what **not** to resolve.
