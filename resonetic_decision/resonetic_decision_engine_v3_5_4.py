@@ -4,7 +4,7 @@
 # Project: Resonetics (Decision Engine)
 # Version: 3.5.5 - Threshold Bug Fixed & Edge Cases Patched
 # Author: red1239109-cmd
-# License: APL-2.0
+# License: AGPL-3.0
 #
 # [Changelog v3.5.5]
 # 1. FIXED: Threshold streaming bug - steps now yield with correct threshold values
