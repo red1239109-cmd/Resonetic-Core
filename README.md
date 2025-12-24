@@ -4,25 +4,6 @@
 ![clones](https://img.shields.io/badge/📦%20Clones-2k%2B-blue?style=for-the-badge&logo=git)
 ![users](https://img.shields.io/badge/👥%20Users-874-green?style=for-the-badge&logo=githubactions)
 
-# 🤔 The Mystery
-
-**"Why does this repo have 2,000+ clones but 0 stars?"**
-
-This project has:
-- ✅ **2,041** clones in 2 weeks
-- ✅ **874** unique users
-- ✅ **4,265** views
-- ❌ **0** stars
-
-**Someone is using this in production.**
-
-### 👇 The Evidence 👇
-![Traffic Stats](https://github.com/사용자명/리포지토리명/blob/main/경로/traffic_stats.png?raw=true)
-*(Actual traffic insights from Dec 6 - Dec 20)*
-<img width="680" height="832" alt="image" src="https://github.com/user-attachments/assets/a4f10ab4-970c-4fcd-8ecc-4fb268a24f20" />
-
----
-
 ### 🚧 Current Status: v0.x (Early Access)
 
 We are evolving rapidly. **Your feedback fuels this engine.**
