@@ -1,283 +1,83 @@
-# 🛡️ Godel Guardrail Enterprise
+# Godel Guardrail Enterprise v10.1
 
-**Production-Ready Prompt Security Guardrail**  
-FastAPI · Hot Reload · Prometheus Metrics · Fail-Open Support · Encrypted Audit Logs
+Production-ready guardrail service with:
+- FastAPI API (`/scan`, `/reload`)
+- Prometheus metrics (`/metrics`)
+- K8s health endpoint (`/health`)
+- Defense-in-depth sanitization + plugin inspection
+- Rate limiting (global + per-user)
+- Encrypted audit logs (optional)
+- Fail-open mode (optional)
 
----
-
-## Overview
-
-**Godel Guardrail Enterprise** is a lightweight, high-reliability **prompt security gateway**
-designed to sit in front of LLM or AI services.
-
-It performs **real-time inspection, rate limiting, and anomaly detection**
-before requests reach your model.
-
-This project is intentionally **practical**, not experimental.
-
-❌ No research-only abstractions  
-❌ No heavy ML/RL dependencies  
-✅ Built for production environments
-
----
-
-## Core Features
-
-### 🔐 Defense-in-Depth Security
-
-Layered protection applied in sequence:
-
-1. **Input Sanitization**
-   - Script/XSS pattern detection
-   - Payload size limits
-
-2. **Rate Limiting**
-   - Global TPS bucket
-   - Per-user TPS bucket
-   - Burst support
-
-3. **Pluggable Inspection Engine**
-   - Regex-based prompt injection detection
-   - Entropy-based obfuscation detection
-   - Debt-based escalation model
-
----
-
-### 🧠 Security Debt Model
-
-Each request accumulates **security debt** instead of being instantly blocked.
-
-- Allows low-risk requests to pass
-- Escalates only when abuse patterns persist
-- Reduces false positives in production
-
----
-
-### ⚙️ Fail-Open Mode (Enterprise-Grade)
-
-If a security plugin fails unexpectedly:
-
-- **Fail-Open = true**
-  - Service continues
-  - Incident is logged
-- **Fail-Open = false**
-  - Request fails closed (503)
-
-This prevents **single-plugin failure from taking down production traffic**.
-
----
-
-### 🔄 Hot Configuration Reload
-
-Security rules can be updated **without restarting the service**:
-
-- Regex patterns
-- Entropy thresholds
-- Rate limits
-- Fail-open behavior
-
-Ideal for:
-- Live incident response
-- Gradual policy tuning
-- Blue-green security updates
-
----
-
-### 📊 Observability (Prometheus-Ready)
-
-Built-in metrics include:
-
-- Request counts (allowed / blocked / throttled)
-- Request latency
-- Active in-flight requests
-- Accumulated security debt
-
-Fully compatible with:
-- Prometheus
-- Grafana
-- Kubernetes monitoring
-
----
-
-### 🔏 Encrypted Audit Logging
-
-Audit logs can be:
-
-- Plaintext (development)
-- **Fernet-encrypted (production)**
-
-Encryption key is provided via environment variable.
-
----
-
-## Architecture
-
-Client │ ▼ Godel Guardrail ├─ Sanitizer ├─ Rate Limiter ├─ Security Plugins │     ├─ RegexTrap │     └─ EntropyTrap ├─ Audit Logger └─ Metrics Exporter │ ▼ LLM / AI Backend
-
----
-
-## Installation
-
-### Requirements
+## Quick Start (Docker)
 
 ```bash
-python >= 3.9
-
-Dependencies
-
-pip install fastapi uvicorn prometheus-client cryptography pydantic psutil
-
-
----
-
-Running the Service
-
-python godel_guardrail_enterprise_v10_1.py
-
-Service endpoints:
-
-Endpoint	Purpose
-
-/scan	Prompt inspection
-/reload	Hot reload configuration
-/metrics	Prometheus metrics
-/health	Kubernetes health probe
-/docs	Swagger UI
-
-
-
----
-
+docker build -t godel-guardrail:10.1 .
+docker run --rm -p 8000:8000 godel-guardrail:10.1
+Open:
+Swagger UI: http://localhost:8000/docs
+Health:     http://localhost:8000/health
+Metrics:    http://localhost:8000/metrics
 Environment Variables
-
-GODEL_KEY
-
-Encryption key for audit logs.
-
-export GODEL_KEY="base64_fernet_key"
-
-If not provided:
-
-A temporary key is generated
-
-Warning is logged
-
-Not recommended for production
-
-
-
----
-
-API Usage
-
-Scan Prompt
-
+GODEL_KEY (recommended)
+Fernet key for encrypted audit logs.
+If not provided, the service generates an ephemeral key (logs will still work, but cannot be decrypted later).
+Example:
+코드 복사
+Bash
+export GODEL_KEY="YOUR_FERNET_KEY_STRING"
+docker run --rm -e GODEL_KEY="$GODEL_KEY" -p 8000:8000 godel-guardrail:10.1
+Generate a key in Python:
+코드 복사
+Python
+from cryptography.fernet import Fernet
+print(Fernet.generate_key().decode())
+API
 POST /scan
-
+Request:
+코드 복사
+Json
 {
-  "prompt": "Hello world",
-  "user_id": "user123",
+  "prompt": "hello",
+  "user_id": "alice",
   "tier": "standard"
 }
-
 Response:
-
-{
-  "safe": true,
-  "code": "S200",
-  "reason": "OK"
-}
-
-
----
-
-Hot Reload Configuration
-
+코드 복사
+Json
+{ "safe": true, "code": "S200", "reason": "OK" }
+Possible codes:
+S200: Allowed
+E400: Sanitizer blocked (XSS/script/too long)
+E403: Blocked by plugins
+429: Rate limited
+503: Service shutting down or internal failure
 POST /reload
-
+Hot-reload configuration without restarting the service.
+Request:
+코드 복사
+Json
 {
-  "limits": { "standard": 1.0, "premium": 3.0 },
+  "limits": {"standard": 1.0, "premium": 3.0},
   "patterns": ["ignore previous", "system prompt"],
   "entropy": 5.8,
-  "tps_g": 100,
-  "tps_u": 5,
-  "fail_open": true,
+  "tps_g": 100.0,
+  "tps_u": 5.0,
+  "fail_open": false,
   "audit_encrypt": true
 }
-
-
----
-
-Kubernetes Readiness
-
-GET /health
-
-Returns:
-
-Service status
-
-Uptime
-
-Memory usage
-
-
-Safe for:
-
-Liveness probes
-
-Readiness probes
-
-
-
----
-
-Design Philosophy
-
-Security is a control layer, not a research lab
-
-Stability beats theoretical optimality
-
-Operational clarity > abstraction elegance
-
-Fail safely, never silently
-
-
-
----
-
-When to Use This
-
-✅ LLM API Gateway
-✅ Enterprise AI Security
-✅ Prompt Injection Defense
-✅ Multi-tenant AI Services
-✅ Regulated environments
-
-❌ Not a prompt optimizer
-❌ Not a content moderation engine
-❌ Not a research framework
-
-
----
-
-License
-
-MIT License
-
-SPDX-License-Identifier: MIT
-Copyright (C) 2025 red1239109-cmd
-
-
----
-
-Status
-
-Production-Ready
-
-Actively designed for:
-
-Reliability
-
-Operational safety
-
-Minimal cognitive overhead
+Response:
+코드 복사
+Json
+{ "status": "reloaded" }
+Prometheus
+Scrape:
+GET /metrics
+Includes:
+godel_requests_total{status,plugin,tier}
+godel_latency_seconds{plugin}
+godel_active_requests
+godel_security_debt
+Notes
+This is a guardrail layer: it inspects text prompts for suspicious patterns/obfuscation.
+Tune patterns, entropy, and limits based on your threat model and desired strictness.
