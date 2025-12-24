@@ -1,104 +1,139 @@
-# 🏛️ Resonetics: The Philosophically Grounded AI Decision Engine
+# Resonetic Decision Engine
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-orange?logo=pytorch)
-![License](https://img.shields.io/badge/License-AGPL--3.0-green)
-![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
+**Resonetic Decision** is a lightweight reasoning guard that governs *how beliefs are updated*  
+when new information arrives.
 
-> *"Logic flows like water, but tension holds the structure."*
+It is not a language model.  
+It does not generate answers.
 
-**Resonetics** is a deterministic, explainable AI decision-making engine. Unlike "Black Box" LLM reasoning, Resonetics combines **High-Dimensional Vector Semantics (SBERT)**, **Physics-based Resonance Models**, and **Statistical Tension Analysis** to provide transparent and mathematically rigorous decisions.
-
-It simulates a debate between three philosophical stances—**Rationalist, Empiricist, and Skeptic**—to calculate not just the *best option*, but the *cognitive tension* involved in choosing it.
+Instead, it decides **whether a belief should be updated at all** —  
+and if so, **how much**.
 
 ---
 
-## 🌟 Key Features
+## Why this exists
 
-### 1. 🧠 Multi-Perspective Architecture
-Instead of a simple similarity search, the engine evaluates evidence through three distinct philosophical lenses using **Zero-Shot Semantic Anchors**:
-* **🔵 Rationalist:** Focuses on logic, consistency, and axioms.
-* **🔴 Empiricist:** Focuses on data, history, and observable facts.
-* **⚫ Skeptic:** Focuses on risk, flaws, and uncertainty.
+Most reasoning systems assume:
 
-### 2. ⚡ Dynamic Tension Modeling
-We quantify the "cognitive dissonance" of a decision using a statistically normalized formula.
-* **Physics Tension:** The conflict between "Desire (Pull)" and "Danger (Risk)".
-* **Philosophical Tension:** The variance between the three philosophical perspectives.
-* **Corrected Math:** Utilizes a theoretically proven normalization factor (`2/9`) for variance in bounded intervals `[0,1]`, ensuring precise tension measurement.
+> New information should always be absorbed.
 
-### 3. 🛡️ Enterprise-Grade Reliability
-* **Defensive Programming:** Strict validation via `__post_init__` and type safety.
-* **Pure PyTorch Implementation:** Fully vectorized operations with no CPU/GPU context switching overhead.
-* **Streaming Support:** Buffered generator pattern for real-time dashboards without data inconsistency glitches.
+In practice, this fails.
+
+- Some inputs are contradictory
+- Some are noisy or low-quality
+- Some cause sudden “shock” to the system
+- Some arrive too fast to be trusted immediately
+
+**Resonetic Decision introduces friction.**
+
+It answers a different question:
+
+> *Is this information safe to believe right now?*
 
 ---
 
-## 🏗️ Architecture
+## Core Concept
 
-```mermaid
-graph TD
-    User[User Input] --> Cortex[Semantic Cortex (SBERT)]
-    Cortex --> Static[Static Analyzer]
-    
-    subgraph "Phase 1: Static Analysis"
-        Static --> Coherence[Weighted Coherence]
-        Static --> Risk[Rule-based Risk & Keywords]
-        Static --> Perspectives[Perspective Anchors (R/E/S)]
-    end
-    
-    subgraph "Phase 2: Resonance Loop (Dynamic)"
-        Physics[Physics Engine] --> Belief[Belief State (EMA)]
-        Belief --> Pull[Sigmoid Pull Strength]
-        Perspectives --> Tension[Dynamic Tension Calculation]
-        Governor[Adaptive Governor] --> Threshold{Convergence Check}
-    end
-    
-    Static --> Physics
-    Pull --> FinalScore
-    Tension --> Governor
-    Threshold -- Continue --> Physics
-    Threshold -- Stop --> Result[Final Decision]
+Every update is treated as a **decision**, not an assignment.
 
-Usage Example
+Given:
+- current belief
+- new candidate information
+- coherence (agreement)
+- shock (disruption)
 
-import asyncio
-from src.engine import ResoneticEngineV3, Option, Evidence, Criterion
+The engine chooses one action:
 
-async def main():
-    engine = ResoneticEngineV3()
-    
-    question = "Choose a backend framework for a fintech startup."
-    
-    options = [
-        Option("A", "Django", "Battery-included, mature ecosystem"),
-        Option("B", "FastAPI", "Modern, high-performance async"),
-    ]
-    
-    evidence = [
-        Evidence("A", "Proven stability in banking sectors for 10+ years", 1.0),
-        Evidence("A", "Slightly slower performance compared to Go/Rust", -0.3),
-        Evidence("B", "Type hints prevent many logical errors", 1.0),
-        Evidence("B", "Newer ecosystem implies potential hidden risks", -0.5),
-    ]
-    
-    # Run Decision
-    result = await engine.decide(question, options, evidence)
-    
-    print(f"🏆 Winner: {result.chosen} (Conf: {result.confidence:.3f})")
-    print(f"📉 Tension: {result.steps[-1].metrics['tension']:.3f}")
-    print(f"💡 Reason: {result.reason}")
+- **ABSORB** — fully accept the update  
+- **DAMPEN** — accept partially  
+- **HOLD** — temporarily suspend update  
+- **ROLLBACK** — reject and revert (optional)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+This makes belief evolution **stable, explainable, and controllable**.
 
-    🧮 Mathematical Integrity
+---
 
-    Tension Variance CorrectionIn v3.5.1, we corrected the variance normalization factor.For three values $\{a, b, c\} \in [0, 1]$, the theoretical maximum population variance occurs at the extremes (e.g., $\{0, 0, 1\}$).$$ \text{Max Variance} = \frac{(0 - 1/3)^2 + (0 - 1/3)^2 + (1 - 1/3)^2}{3} = \frac{2}{9} \approx 0.222 $$Previous heuristics used $1/6$, which led to overflow in extreme polarization. Resonetics now strictly adheres to this bound.
+## What Resonetic Decision is good at
 
-    🗺️ Roadmap
-v4.0: Integration with LLM agents for automated evidence gathering.
+- Preventing runaway belief drift
+- Detecting sudden logical or semantic shocks
+- Slowing down overconfident updates
+- Preserving historical consistency
+- Providing clear *reasons* for stopping or accepting updates
 
-v4.1: Multi-agent debate simulation (Arena Mode).
+It works especially well as:
+- a guardrail before model updates
+- a reasoning stabilizer in multi-step inference
+- a safety layer for autonomous agents
+- a “pause button” for uncertain conclusions
 
-Dashboard: Web-based UI using Streamlit for real-time visualization of the "Resonance Loop".
+---
+
+## Architecture (High-Level)
+
+Input (new info) ↓ Coherence / Shock signals ↓ Belief Update Governor ↓ Decision: ABSORB | DAMPEN | HOLD | ROLLBACK ↓ Updated Belief + Explanation
+
+The engine is **stateful but bounded**:
+- belief evolves slowly
+- shock accumulates but decays
+- updates are never forced
+
+---
+
+## Design Principles
+
+- **Belief is earned, not assumed**
+- **Silence is sometimes safer than action**
+- **Shock should slow the system, not break it**
+- **Every update must be explainable**
+- **Stopping is a valid outcome**
+
+These principles are enforced in code, not comments.
+
+---
+
+## What this is NOT
+
+- Not a chatbot
+- Not a classifier
+- Not a policy engine
+- Not a black-box scorer
+
+Resonetic Decision does not decide *what is true*.
+
+It decides **when to accept something as true**.
+
+---
+
+## Typical Use Cases
+
+- Streaming reasoning pipelines
+- Multi-step inference with uncertainty
+- Autonomous agents operating over time
+- Safety layers for LLM outputs
+- Any system where “instant belief” is dangerous
+
+---
+
+## Status
+
+- Core engine: stable
+- Belief Update Governor: in progress
+- API / embedding layers: optional
+- Research features: intentionally minimized
+
+This project favors **operational clarity over theoretical completeness**.
+
+---
+
+## License
+
+Apache License 2.0  
+Commercial use, modification, and redistribution are permitted.
+
+---
+
+## Author
+
+**red1239109-cmd**  
+2025
