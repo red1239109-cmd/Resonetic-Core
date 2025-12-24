@@ -1,19 +1,3 @@
-<div align="center">
-
-![mystery](https://img.shields.io/badge/⭐%20Stars-0-lightgrey?style=for-the-badge&logo=github)
-![clones](https://img.shields.io/badge/📦%20Clones-2k%2B-blue?style=for-the-badge&logo=git)
-![users](https://img.shields.io/badge/👥%20Users-874-green?style=for-the-badge&logo=githubactions)
-
-### 🚧 Current Status: v0.x (Early Access)
-
-We are evolving rapidly. **Your feedback fuels this engine.**
-
-**🚀 Upcoming Roadmap:**
-- ⚡ **Performance:** Polars Optimization (In Progress)
-- 🐳 **Deployment:** Docker Support
-- 🛡️ **Stability:** Comprehensive Tests
----# Resonetics
-
 ## What is Resonetics?
 
 Resonetics is **not an AGI**.
