@@ -1,0 +1,30 @@
+# ==============================================================================
+# Resonetics – Runtime / Security Exclusions
+# ==============================================================================
+
+# runtime artifacts (NEVER COMMIT)
+*.ledger
+*.audit
+*.head
+*.key
+.locks/
+
+# python
+__pycache__/
+*.pyc
+
+# streamlit
+.streamlit/
+
+# os
+.DS_Store
+
+# ==============================================================================
+# SECURITY NOTICE – DO NOT COMMIT THE FOLLOWING FILES
+#
+# *.ledger  → contains sensitive runtime history (append-only ledger)
+# *.key     → HMAC root secret; leakage breaks integrity guarantees
+# *.head    → chain head pointer (split-brain risk)
+# *.audit   → internal forensic records
+# .locks/   → active process lock files
+# ==============================================================================
