@@ -105,6 +105,7 @@ But this repository intentionally preserves the **monolithic form** as the refer
 
 
 ---
+
 RESONETICS MONOLITH - A UNIFIED SYSTEM
 
 Read this file from top to bottom.
