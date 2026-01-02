@@ -19,20 +19,16 @@
 ### 설치
 ```bash
 pip install polars pandas numpy  # 필수
-git clone https://github.com/[your-username]/data-refinery-engine.git
-cd data-refinery-engine
 
-from dre_v1_13_4_single_trunk import DataRefineryEngine, make_df
+# 데모 실행
+python dre_v1_13_4_single_trunk.py --mode demo
 
-engine = DataRefineryEngine(target_kpi="income", parallel=True)
-data = make_df(100_000, 100)  # 10만 행, 100 컬럼 샘플 데이터
-df_clean, lineage, cards = engine.refine(data)
+# 벤치마크
+python dre_v1_13_4_single_trunk.py --mode benchmark --parallel
 
-print(f"Kept {len(lineage['kept'])} / Dropped {len(lineage['dropped'])} columns")
-print(f"Final threshold: {lineage['threshold']:.3f}")
-
-python dre_v1_13_4_single_trunk.py --mode benchmark --sizes 10000,50000,100000 --parallel
-python dre_v1_13_4_single_trunk.py --mode col-sweep --col-sweep 20,50,100,200 --parallel
+# 컬럼 스윕
+python dre_v1_13_4_single_trunk.py --mode col-sweep --parallel
+로그는 자동으로 runs/ 디렉토리에 생성됩니다 (Git 무시).
 
 MIT License - 자세한 내용은 LICENSE 파일을 참조하세요.
 
