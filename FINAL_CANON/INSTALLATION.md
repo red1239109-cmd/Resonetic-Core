@@ -110,4 +110,3 @@ python3 core/resonetics.py
 
 Resonetics creates a `.db` file (SQLite) to store the immutable forensic chain. Ensure that the process has **Write permissions** in the target directory and that the database file is included in your backup/security rotations.
 
-Would you like to add a specific section for **Docker/Container** deployment or **Cloud SQL** integration?
