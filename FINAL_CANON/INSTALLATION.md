@@ -1,8 +1,4 @@
-Here is the **INTEGRATION.md** (Installation Guide) in English. I have titled it "Integration" rather than "Installation" to better reflect the high-level nature of the Anchor kernel, as it is designed to be a core infrastructure component of a larger system.
-
----
-
-# Integration Guide: Resonetics v22.1.2-Anchor
+# Integration Guide: Resonetics -Anchor
 
 This guide outlines how to successfully implant the Resonetics Anchor kernel into your high-assurance systems or autonomous agent environments.
 
