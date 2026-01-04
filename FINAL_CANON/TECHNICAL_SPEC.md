@@ -56,9 +56,3 @@ The internal logic of Resonetics is architected for transparency. Performance-or
 
 ---
 
-### How to use this document
-
-1. **File Placement**: Save this as `TECHNICAL_SPEC.md` in your repository root.
-2. **Developer Onboarding**: Require all contributors to read this before touching the `v22.1.2-Anchor` source file.
-3. **Auditing**: Use the "Forensic Indicator Lexicon" as a guide when analyzing the `observation_log` table in your database.
-
