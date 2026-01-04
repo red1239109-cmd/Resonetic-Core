@@ -39,6 +39,7 @@ Resonetics is self-proving. Run the file directly to execute the integrated Audi
 python3 resonetics.py
 
 ```
+<img width="368" height="264" alt="KakaoTalk_20260104_213904221" src="https://github.com/user-attachments/assets/f8bd0110-6014-41d0-8ebd-b441799770e9" />
 
 ## 🛠 Technical Specifications
 
