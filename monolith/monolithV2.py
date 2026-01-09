@@ -1,6 +1,6 @@
 # ==============================================================================
 # Project: Resonetics
-# File:monolithV2
+# File: monolithV2 (patched)
 # Author: red1239109-cdm
 #
 # Copyright 2025 red1239109-cdm
@@ -59,22 +59,22 @@ class Config:
     try: _RAW = os.path.dirname(os.path.abspath(__file__))
     except NameError: _RAW = os.getcwd()
     BASE_DIR_PATH = Path(_RAW).resolve(); BASE_DIR = str(BASE_DIR_PATH)
-    
+
     FILE_ATTRIBUTE_REPARSE_POINT = 0x400
     INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF
 
     @classmethod
-    def _canonicalize(cls, p): 
+    def _canonicalize(cls, p):
         return str(Path(p).absolute())
-    
+
     @classmethod
     def _norm_key(cls, p, already_canon=False):
         c = p if already_canon else cls._canonicalize(p)
         return c.casefold() if os.name == 'nt' else c
-    
+
     @classmethod
     def within_base(cls, p):
-        try: 
+        try:
             t = Path(p).absolute()
             b = cls.BASE_DIR_PATH
             if os.name == 'nt':
@@ -88,17 +88,17 @@ class Config:
     def get_lock_dir(cls): return str(cls.BASE_DIR_PATH / ".locks")
     @classmethod
     def get_temp_dir(cls): return str(cls.BASE_DIR_PATH / ".tmp")
-    
+
     MAX_HEADER_SIZE, MAX_FRAME_SIZE = 20, 256 * 1024
     MAX_SKIP_BYTES, MAX_SKIPS_ALLOWED = 4096, 100
-    PULSE_INTERVAL, COMMIT_INTERVAL = 1.0, 10.0 
-    DEEP_SCAN_BUDGET, FAST_SCAN_BUDGET = 2.0, 0.3 
-    BOOT_SCAN_BUDGET, MAX_WARN_KEYS = 30.0, 1024 
-    _UNSET = -1.0 
-    
+    PULSE_INTERVAL, COMMIT_INTERVAL = 1.0, 10.0
+    DEEP_SCAN_BUDGET, FAST_SCAN_BUDGET = 2.0, 0.3
+    BOOT_SCAN_BUDGET, MAX_WARN_KEYS = 30.0, 1024
+    _UNSET = -1.0
+
     HAS_NOFOLLOW = hasattr(os, "O_NOFOLLOW")
     DEV_MODE = os.environ.get("RESONETICS_DEV_MODE")=="1"
-    
+
     SIG_FIELDS_V2 = ["prev_hash", "global_step", "physics_step", "episode", "episode_step", "type", "status", "msg", "metrics", "meta", "time", "ver"]
     SNAP_FIELDS_V2_1 = ["global_step", "chain_tip", "anchor_hash", "physics_step", "metrics", "timestamp", "ver", "_key_fp", "snap_ver", "app_ver", "ledger_offset"]
     SNAP_FIELDS_V2_0 = ["global_step", "chain_tip", "anchor_hash", "physics_step", "metrics", "timestamp", "ver", "_key_fp", "snap_ver", "app_ver"]
@@ -106,7 +106,7 @@ class Config:
     POLICIES = {
         "AUDIT_FAST": {"strict_stream": False, "allow_extra": True, "lock": False, "budget": FAST_SCAN_BUDGET, "nb": False},
         "AUDIT_DEEP": {"strict_stream": False, "allow_extra": True, "lock": True, "budget": DEEP_SCAN_BUDGET, "nb": False},
-        "BOOT":       {"strict_stream": True, "allow_extra": True, "lock": True, "budget": BOOT_SCAN_BUDGET, "nb": False} 
+        "BOOT":       {"strict_stream": True, "allow_extra": True, "lock": True, "budget": BOOT_SCAN_BUDGET, "nb": False}
     }
 
 def _gp(p): return Path(Config._canonicalize(p))
@@ -171,7 +171,7 @@ class TrackedRLock:
     def __enter__(self):
         if getattr(_IO_TRACKER, "d", 0)>0 and not self.io: raise ResoneticsFatal(f"VIOLATION: Lock {self.n} in IO")
         self._l.acquire(); self._t.c = getattr(self._t, "c", 0)+1; return self
-    def __exit__(self, *a): 
+    def __exit__(self, *a):
         try: self._t.c = max(0, getattr(self._t, "c", 0)-1)
         finally: self._l.release()
 
@@ -199,13 +199,29 @@ if "GLOBAL_STATE" not in st.session_state: st.session_state.GLOBAL_STATE = Proce
 GLOBAL_STATE = st.session_state.GLOBAL_STATE
 _WARN_LOCK = threading.Lock()
 
+# ==============================================================================
+# PATCH 1: warn_once LRU (avoid "clear everything" policy)
+# - Keeps O(1) membership via set + deque for eviction
+# - Still protected by _WARN_LOCK
+# ==============================================================================
+def _warn_cache_init():
+    if "_WR_SET" not in st.session_state: st.session_state._WR_SET = set()
+    if "_WR_Q" not in st.session_state: st.session_state._WR_Q = deque(maxlen=Config.MAX_WARN_KEYS)
+
 def warn_once(key, msg):
     h = hashlib.sha256(key.encode()).hexdigest()[:12]
     with _WARN_LOCK:
-        if "_WR" not in st.session_state: st.session_state._WR = set()
-        if len(st.session_state._WR) >= Config.MAX_WARN_KEYS: st.session_state._WR.clear()
-        if h in st.session_state._WR: return
-        st.session_state._WR.add(h)
+        _warn_cache_init()
+        s = st.session_state._WR_SET
+        q = st.session_state._WR_Q
+        if h in s: 
+            return
+        # Evict oldest if deque at capacity (maxlen handles pop, but we must sync set)
+        if len(q) >= q.maxlen:
+            old = q.popleft()
+            s.discard(old)
+        q.append(h)
+        s.add(h)
     log_boot(msg, "WARN")
 
 def flush_pending_logs():
@@ -225,7 +241,7 @@ def flush_pending_logs():
         buf = getattr(_IO_TRACKER, "p", []); n = len(buf)
         if not buf: return 0
         with GLOBAL_STATE._lock:
-            for e, l, r in buf: 
+            for e, l, r in buf:
                 GLOBAL_STATE.boot_logs.append(e)
                 if l in ("ERROR","FATAL") and GLOBAL_STATE.root_cause=="OK": GLOBAL_STATE.root_cause = r[:40]
         buf.clear(); return n
@@ -247,27 +263,46 @@ def _guard_no_state_lock(r=""):
     if gs and gs._lock.held_by_me(): raise ResoneticsFatal(f"VIOLATION: Lock STATE during IO ({r})")
 
 # ---- Core Helpers ----
+# ==============================================================================
+# PATCH 2: _secure_dir_open fd leak hardening
+# - Ensures next_fd is closed if any exception occurs after opening it
+# - Keeps behavior identical otherwise
+# ==============================================================================
 def _secure_dir_open(path):
     if not IS_POSIX: return None
     if not Config.within_base(path): raise ResoneticsFatal("WALK_OUTSIDE_BASE")
     nf, cx = getattr(os, "O_NOFOLLOW", 0), getattr(os, "O_CLOEXEC", 0)
     if not Config.HAS_NOFOLLOW and not Config.DEV_MODE: raise ResoneticsFatal("OS_INSECURE_POLICY")
-    
+
     cur_fd = os.open(str(Config.BASE_DIR_PATH), os.O_RDONLY | os.O_DIRECTORY | cx)
     rel_path = os.path.relpath(path, str(Config.BASE_DIR_PATH))
     if rel_path == ".": return cur_fd
-    
+
     try:
         for part in Path(rel_path).parts:
-            if part in ("", ".", ".."): raise ResoneticsFatal(f"PATH_COMPONENT_VIOLATION:{part}")
-            next_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | nf | cx, dir_fd=cur_fd)
-            f_st, l_st = os.fstat(next_fd), os.stat(part, dir_fd=cur_fd, follow_symlinks=False)
-            if (f_st.st_dev, f_st.st_ino) != (l_st.st_dev, l_st.st_ino):
-                os.close(next_fd); raise ResoneticsFatal(f"CHAIN_MIRROR_DETECTION:{part}")
-            os.close(cur_fd); cur_fd = next_fd
+            if part in ("", ".", ".."):
+                raise ResoneticsFatal(f"PATH_COMPONENT_VIOLATION:{part}")
+
+            next_fd = None
+            try:
+                next_fd = os.open(part, os.O_RDONLY | os.O_DIRECTORY | nf | cx, dir_fd=cur_fd)
+                f_st = os.fstat(next_fd)
+                l_st = os.stat(part, dir_fd=cur_fd, follow_symlinks=False)
+                if (f_st.st_dev, f_st.st_ino) != (l_st.st_dev, l_st.st_ino):
+                    raise ResoneticsFatal(f"CHAIN_MIRROR_DETECTION:{part}")
+
+                os.close(cur_fd)
+                cur_fd = next_fd
+                next_fd = None
+            finally:
+                # If we opened next_fd but failed before promoting it to cur_fd, close it.
+                if next_fd is not None:
+                    try: os.close(next_fd)
+                    except: pass
+
         return cur_fd
     except Exception as e:
-        if cur_fd != -1: 
+        if cur_fd != -1:
             try: os.close(cur_fd)
             except: pass
         raise ResoneticsFatal(f"CHAIN_WALK_FAIL:{e}")
@@ -278,27 +313,27 @@ def _audit_handle_identity(fd, display_name, logical_path=None, force_oath=False
         final_p = _win_final_path_from_fd(fd)
         final_canon = Config._canonicalize(final_p)
         target_key = Config._norm_key(final_canon, already_canon=True)
-        
+
         # Fix 3🚨: Robust attribute check on final path
         attr = _GetFileAttributesW(final_canon)
         if attr == Config.INVALID_FILE_ATTRIBUTES:
             # Fallback to handle-raw path if canon failed
             attr = _GetFileAttributesW(final_p)
-            
+
         if attr == Config.INVALID_FILE_ATTRIBUTES or (attr & Config.FILE_ATTRIBUTE_REPARSE_POINT):
             raise ResoneticsFatal(f"WIN_HANDLE_DIRTY:{display_name}")
-            
+
         if not Config.within_base(final_canon): raise ResoneticsFatal(f"BOUNDARY_ESC:{display_name}")
     else:
         st_obj = os.fstat(fd)
         target_key = f"posix:{st_obj.st_dev}:{st_obj.st_ino}"
-    
+
     core_keys = st.session_state.get('GLOBAL_CORE_KEYS', frozenset())
-    
+
     # Fix 4🚨: Dual-Map Promotion (Check both physical ID and normalized logical path)
     logical_key = Config._norm_key(logical_path) if logical_path else None
     effective_force = force_oath or (target_key in core_keys) or (logical_key in core_keys)
-    
+
     if effective_force:
         cid = _gen_cid(fd, os.fstat(fd))
         with GLOBAL_STATE._oath_lock:
@@ -312,7 +347,7 @@ def base_dir_safety_check():
     curr_base_canon = str(Config.BASE_DIR_PATH)
     if "SESSION_BASE_DIR" not in st.session_state: st.session_state.SESSION_BASE_DIR = curr_base_canon
     elif st.session_state.SESSION_BASE_DIR != curr_base_canon: GLOBAL_STATE.trigger_quarantine("DIR_IDENTITY_DRIFT"); return
-    
+
     l, all_core_keys = [], set()
     try:
         with io_context():
@@ -337,7 +372,8 @@ def base_dir_safety_check():
                                 st_f, st_l = os.fstat(fd), os.stat(fname, dir_fd=dfd, follow_symlinks=False)
                                 if (st_f.st_dev, st_f.st_ino) != (st_l.st_dev, st_l.st_ino): l.append((f"MIRROR:{cp.name}", "FATAL"))
                                 h_key = f"posix:{st_f.st_dev}:{st_f.st_ino}"; all_core_keys.add(h_key)
-                                cid = _gen_cid(fd, st_f); with GLOBAL_STATE._oath_lock: GLOBAL_STATE.file_oaths[h_key] = cid
+                                cid = _gen_cid(fd, st_f)
+                                with GLOBAL_STATE._oath_lock: GLOBAL_STATE.file_oaths[h_key] = cid
                             finally: os.close(fd)
                         finally: os.close(dfd)
                 except OSError: l.append((f"OPEN_FAIL:{cp.name}", "FATAL"))
@@ -402,8 +438,9 @@ class ResoneticCrypto:
             try:
                 with self.secure_open(str(kp), "rb", oath=True) as f: self.s = f.read()
             except (FileNotFoundError, OSError): pass
-            if not self.s or len(self.s)!=32: 
-                self.s = secrets.token_bytes(32); with self.secure_open(str(kp), "wb", oath=True) as f: f.write(self.s)
+            if not self.s or len(self.s)!=32:
+                self.s = secrets.token_bytes(32)
+                with self.secure_open(str(kp), "wb", oath=True) as f: f.write(self.s)
         self.fp = hashlib.sha256(self.s).hexdigest()[:12]
         with GLOBAL_STATE._lock: GLOBAL_STATE.key_fingerprint = self.fp
 
@@ -444,8 +481,8 @@ class ResoneticCrypto:
         try:
             with ps[0][1], ps[1][1]:
                 anc = (0, Config.GENESIS_HASH)
-                try: 
-                    with self.secure_open(hp, "rb", oath=True) as f: 
+                try:
+                    with self.secure_open(hp, "rb", oath=True) as f:
                         p = f.read().decode().split()
                         if len(p) >= 2 and p[0].isdigit() and self._is_hash64(p[1]): anc = (int(p[0]), p[1].lower())
                 except: pass
@@ -457,7 +494,7 @@ class ResoneticCrypto:
                 with self.secure_open(fp, "ab", oath=True) as f:
                     d = json.dumps(pl, separators=(",",":"), ensure_ascii=False).encode()
                     f.write(f"{len(d)}:".encode()+d+b"\n"); f.flush(); os.fsync(f.fileno()); no = f.tell()
-                with self.secure_open(f"{hp}.tmp", "wb", oath=False) as f: 
+                with self.secure_open(f"{hp}.tmp", "wb", oath=False) as f:
                     f.write(f"{pl['global_step']} {pl['hash']}\n".encode()); f.flush(); os.fsync(f.fileno())
                 os.replace(f"{hp}.tmp", hp); return pl, no
         except: raise
@@ -466,13 +503,13 @@ class ResoneticCrypto:
         ok, st_res, res, tip, off = self.verify(lp, hp=None, deep=True, vh=False, nb=True)
         if not ok or tip!=lh or st_res["vc"]!=seq: log_boot("REBUILD_FAIL", "FATAL"); raise ResoneticsFatal("EVID_MISMATCH")
         with AtomicFileLock(hp, True):
-            with self.secure_open(f"{hp}.tmp", "wb", oath=False) as f: 
+            with self.secure_open(f"{hp}.tmp", "wb", oath=False) as f:
                 f.write(f"{seq} {lh.lower()}\n".encode()); f.flush(); os.fsync(f.fileno())
             os.replace(f"{hp}.tmp", hp)
 
     def snap(self, sp, st_dict, ah, ct):
         _guard_no_state_lock("snap")
-        pl = {**st_dict, "anchor_hash": ah, "chain_tip": ct, "timestamp": datetime.now(timezone.utc).isoformat(), 
+        pl = {**st_dict, "anchor_hash": ah, "chain_tip": ct, "timestamp": datetime.now(timezone.utc).isoformat(),
               "_key_fp": self.fp, "snap_ver": "v2.1", "app_ver": Config.APP_VERSION, "ledger_offset": GLOBAL_STATE.ledger_offset}
         with AtomicFileLock(sp, True):
             cs = json.dumps({k: pl[k] for k in Config.SNAP_FIELDS_V2_1}, sort_keys=True, separators=(",",":"), ensure_ascii=False)
@@ -491,7 +528,7 @@ class ResoneticCrypto:
                 return None, "SCHEMA"
         except Exception as e: return None, str(e)
 
-    def verify(self, lp, hp=None, deep=False, off=0, eh=None, es=0, vh=True, nb=False, 
+    def verify(self, lp, hp=None, deep=False, off=0, eh=None, es=0, vh=True, nb=False,
                strict_stream=False, lock=None, budget=Config._UNSET, allow_extra=False,
                policy: Optional[PolicySpec] = None):
         if policy is not None:
@@ -520,12 +557,12 @@ class ResoneticCrypto:
                         else: return False, {"vc":pg, "vf":0}, "HEAD_READ_FAIL", ctip, l_good
                 for ent, err, nx in fr:
                     if err:
-                        if attempt==0 and is_resume and vf==0 and err["code"]=="FATAL": resume_immediate_fatal = True; break
-                        if err["code"]=="SKIP": s_cnt += 1; l_good = nx; continue
-                        if err["code"]=="EOF": break
-                        if err["code"]=="BUDGET":
+                        if attempt==0 and is_resume and vf==0 and err.get("code")=="FATAL": resume_immediate_fatal = True; break
+                        if err.get("code")=="SKIP": s_cnt += 1; l_good = nx; continue
+                        if err.get("code")=="EOF": break
+                        if err.get("code")=="BUDGET":
                             return True, {"vc":pg, "vf":vf, "sk":s_cnt, "ct":ctip, "resume_off":l_good, "resume_prev_hash":t_eh, "next_prev_hash": ep, "resume_base_step":pg}, "YIELD", ctip, l_good
-                        return False, {"vc":pg, "vf":vf}, err["msg"], ctip, l_good
+                        return False, {"vc":pg, "vf":vf}, err.get("msg","ERR"), ctip, l_good
                     ok_e, why = self.ver_ent(ent, Config.SIG_FIELDS_V2, allow_extra=allow_extra); vf += 1
                     if not ok_e: return False, {"vc":pg, "vf":vf}, f"SIG:{why}", ctip, l_good
                     l_good, ftip, est = nx, ent["hash"].lower(), int(ent["global_step"])
@@ -548,18 +585,18 @@ class ResoneticCrypto:
         """[Security Core] Fix 1🚨: Semantic-aware modification policy for Win."""
         if not p: raise ValueError("OPEN_TARGET_NONE")
         if 'GLOBAL_CORE_KEYS' not in st.session_state: base_dir_safety_check()
-        
+
         # Fix 1.1🚨: Correctly define temp requirement (Only for Overwrite/Creation)
         is_overwrite = ("w" in m or "x" in m)
         can_modify = any(ch in m for ch in ("w", "x", "a", "+"))
         target_rs = Config._canonicalize(str(p)); parent_dir = os.path.dirname(target_rs)
-        
+
         if not (Config.within_base(target_rs) and Config.within_base(parent_dir)): raise ResoneticsFatal("ESCAPE_ATTEMPT")
-        
+
         with io_context():
             nf, cx = getattr(os, "O_NOFOLLOW", 0), getattr(os, "O_CLOEXEC", 0)
             fd, fobj, temp_path = None, None, None
-            
+
             # Fix 1.2🚨: Use temp file ONLY for Overwrite modes to preserve Append/Update semantics
             if IS_WINLOCK and is_overwrite:
                 tmp_dir = Config.get_temp_dir(); os.makedirs(tmp_dir, 0o700, exist_ok=True)
@@ -577,7 +614,7 @@ class ResoneticCrypto:
                         flags = (os.O_RDWR if "+" in m else os.O_WRONLY) | os.O_CREAT
                         if "w" in m: flags |= os.O_TRUNC
                         elif "a" in m: flags |= os.O_APPEND
-                    
+
                     fname = os.path.basename(target_rs)
                     fd = os.open(fname, flags | nf | cx, 0o600, dir_fd=dfd)
                     # Promotion handled within identity auditor
@@ -595,7 +632,7 @@ class ResoneticCrypto:
                     if os.path.exists(target_rs):
                         ta = _GetFileAttributesW(str(target_rs))
                         if ta == Config.INVALID_FILE_ATTRIBUTES or (ta & Config.FILE_ATTRIBUTE_REPARSE_POINT): raise ResoneticsFatal("WIN_FILE_REPARSE")
-                
+
                 fobj = open(actual_op_path, m)
                 try:
                     _audit_handle_identity(fobj.fileno(), target_rs, logical_path=target_rs, force_oath=oath); yield fobj
@@ -677,8 +714,10 @@ class ResoneticAgent:
                 self.ps.current_s = max(0.0001, self.ps.current_s - 0.005)
                 self.ps.current_phi = max(0.1, 1.0 - self.ps.current_s * 1.25); self.phs += 1
                 try:
-                    pl, no = self.c.commit(str(Config.LEDGER_FILE_P), str(Config.HEAD_FILE_P), 
-                        lambda n,p: {"prev_hash":p, "global_step":n, "physics_step":self.phs, "episode":0, "episode_step":0, "type":"PULSE", "status":"OK", "msg":"Pulse", "metrics":{"entropy":round(self.ps.current_s, 6), "stability":round(self.ps.current_phi, 6)}, "meta":{}, "time":datetime.now(timezone.utc).isoformat(), "ver":"v2"}, self.hc)
+                    pl, no = self.c.commit(str(Config.LEDGER_FILE_P), str(Config.HEAD_FILE_P),
+                        lambda n,p: {"prev_hash":p, "global_step":n, "physics_step":self.phs, "episode":0, "episode_step":0, "type":"PULSE", "status":"OK", "msg":"Pulse",
+                                     "metrics":{"entropy":round(self.ps.current_s, 6), "stability":round(self.ps.current_phi, 6)},
+                                     "meta":{}, "time":datetime.now(timezone.utc).isoformat(), "ver":"v2"}, self.hc)
                     self.gs, self.hc = pl["global_step"], pl["hash"]
                     with GLOBAL_STATE._lock: GLOBAL_STATE.last_commit_time, GLOBAL_STATE.ledger_offset = time.time(), no
                 except ResoneticsHeadStale as e:
@@ -730,3 +769,4 @@ def pulse_monitor():
     st.sidebar.info(f"Audit Status: {GLOBAL_STATE.last_audit_result}")
     if GLOBAL_STATE.snapshot_loaded: st.sidebar.success("Snapshot Restored")
 pulse_monitor()
+
