@@ -56,5 +56,5 @@ outside the demonstrated benchmarks.
 
 ## License
 
-AGPL-3.0 (see LICENSE)  
+Apache-2.0 (see LICENSE)  
 Commercial licensing available upon request.
