@@ -20,7 +20,7 @@
 #
 # Version: 2.2.0-DIST-INTEGRATED
 # Author: red1239109-cmd
-# Repository: https://github.com/red1239109-cmd/resonetics
+# Repository: https://github.com/red1239109-cmd/resonetics-Core
 #
 # ==============================================================================
 # LICENSE
